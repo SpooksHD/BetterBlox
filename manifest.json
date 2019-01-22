@@ -6,7 +6,7 @@
     "content_scripts": [{
         "css": ["main.css"],
         "js": ["jquery.js","main.js"],
-        "matches": ["https://www.roblox.com/my/groupadmin.aspx*"]
+        "matches": ["https://*.roblox.com/*"]
     }],
     "permissions": [
         "storage"
