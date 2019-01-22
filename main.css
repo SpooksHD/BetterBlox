@@ -1,0 +1,88 @@
+.revenueHolder{
+    text-align: center;
+    left: 0px !important;
+}
+.revenueHolder li{
+    float: none !important;
+    display: inline-block !important;
+}
+
+.revenueItem{
+    padding-right: 12px;
+    position: relative;
+}
+
+.revenueItem p{
+    color: #000;
+    background-color: #ececec;
+    text-decoration: none;
+    padding: 4px 12px;
+    border-radius: 3px;
+    position: relative;
+    font-weight: 400;
+}
+
+.revenueItem h2{
+    color: #000;
+    text-decoration: none;
+    font-weight: normal;
+    display: inline-block;
+    position: absolute;
+    transform: translate(-50%, -45%);
+    font-size: small;
+    width: 150%;
+}
+
+.revenueSearch{
+    color: #000;
+    background-color: #ececec;
+    text-decoration: none;
+    padding: 4px 12px;
+    border-radius: 3px;
+    position: relative;
+    font-weight: 400;
+    text-align: center;
+    width: 75%;
+    height: 100%;
+    border-style:solid;
+    border-color: rgb(228, 228, 228);
+    border-width: 1px;
+    color: rgb(62, 62, 62);
+    font-weight: bold;
+}
+
+.userSearch{
+    color: #000;
+    background-color: #ececec;
+    text-decoration: none;
+    padding: 4px 12px;
+    border-radius: 3px;
+    position: relative;
+    font-weight: 400;
+    text-align: center;
+    width: 75%;
+    height: 100%;
+    border-style:solid;
+    border-color: rgb(228, 228, 228);
+    border-width: 1px;
+    color: rgb(62, 62, 62);
+    font-weight: bold;
+}
+
+.userHolder {
+    display: block;
+    overflow: auto;
+    max-height: 300px;
+}
+
+.userHolder table{
+    width: 100%;
+}
+
+.userHolder table .date, .userHolder table .amount, .userHolder table .avatar, .userHolder table .ccgame{
+    width: 15%;
+}
+
+.userHolder table .description{
+    width: 55%;
+}

@@ -1,0 +1,19 @@
+{
+    "name": "BetterBlox",
+    "version": "1.3",
+    "description": "An attempt at a more organized, better looking, featured packed Roblox",
+    "manifest_version": 2,
+    "content_scripts": [{
+        "css": ["main.css"],
+        "js": ["jquery.js","main.js"],
+        "matches": ["https://www.roblox.com/my/groupadmin.aspx*"]
+    }],
+    "permissions": [
+        "storage"
+    ],
+    "icons": {
+        "16": "icon16.png",
+        "48": "icon48.png",
+        "128": "icon128.png"
+    }
+}
