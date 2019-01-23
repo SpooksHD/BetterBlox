@@ -367,7 +367,7 @@ function revenue_stats(){
 
                 //Set total number
                 if(total!=undefined){
-                    $('#rbx-game-passes').find('h3').text("Passes for this game ("+total.toLocaleString()+" Robux)")
+                    $('#rbx-game-passes').find('h3').text("Passes for this game ("+Math.round(total*0.7).toLocaleString()+" Robux)")
                 }
             },1000)
 
@@ -420,7 +420,7 @@ function revenue_stats(){
 
 
                                         //Set text
-                                        stats.find('.robux').text(totalRobuxMade.toLocaleString())
+                                        stats.find('.robux').text(Math.round(totalRobuxMade*0.7).toLocaleString())
                                         total+=Number(totalRobuxMade)
                                     }
                                 })
@@ -456,7 +456,7 @@ function revenue_stats(){
                         gameSales.appendTo($('.game-title-container'))
                     }
                     gameSales.find('#copiesSold').text(data.Sales.toLocaleString()+" copies")
-                    gameSales.find('.gsRobux').text((data.PriceInRobux*data.Sales).toLocaleString())
+                    gameSales.find('.gsRobux').text(Math.round(data.PriceInRobux*data.Sales*0.7).toLocaleString())
                 })
             }
         }
@@ -530,7 +530,7 @@ function revenue_stats_page(){
             $.get('https://api.roblox.com/Marketplace/Game-Pass-Product-Info?gamepassId='+gamepassID,function(data){
                 if(data){
                     //Set text
-                    object.find('.gsRobux').text((data.PriceInRobux*data.Sales).toLocaleString())
+                    object.find('.gsRobux').text(Math.round(data.PriceInRobux*data.Sales*0.7).toLocaleString())
                 }
             })
         }
