@@ -260,9 +260,6 @@ function game_filter(){
                     chrome.storage.sync.set({visits:0});
                     visits=0;
                 }
-                if(document.location.href.match('my/account') && settings){
-                    settings()
-                }
             });
         });
     })
@@ -306,45 +303,372 @@ function game_filter(){
             })
         }
     },250)
+}
 
-    settings=function(){
-        if($(".ng-scope").get(0)){
-            $('.ng-scope').each(function(index,value){
-                if($(this).find('.ng-binding').eq(0).text()=="Personal"){
-                    var clone=$(this).clone();
-                    clone.attr('window','roblox-game-filter-settings');
+function revenue_stats(){
+    $('body').ready(function(){
+        //Message thing
+        chrome.storage.sync.get('revStatAlert', function(data) {
+            let goodToGo=data.revStatAlert
+            if(goodToGo==undefined){
+                chrome.storage.sync.set({ revStatAlert: true });
+                $(`
+                    <div class="col-xs-12 section-content game-main-content follow-button-enabled" style="
+                        height: 70px;
+                        padding: 0;
+                        min-height: 70px;
+                        margin-bottom: 5px;
+                    "><div style="
+                        width: 55px;
+                        height: 55px;
+                        display: inline-block;
+                        position: absolute;
+                        left: 10px;
+                        top: 8px;
+                        background-image: url(&quot;https://t4.rbxcdn.com/00ddd9996f2ecca4d5859eacc8115cb9&quot;);
+                        background-repeat: no-repeat;
+                        background-size: contain;
+                    "></div><div style="
+                        margin-top: 15px;
+                        display: inline-block;
+                        position: absolute;
+                        left: 75px;
+                        width: 90%;
+                        font-weight: bold;
+                    ">Hey! Looks like it's your first time visiting a page where we can show you a game's revenue using BetterBlox. This will only show one time, but just in case, if you wanted to enable revenue stats click <a style="font-weight: 400; color: #00A2FF; text-decoration: none;" href="https://www.roblox.com/my/account#!/info">here!</a></div></div>
+                `).prependTo($('#game-detail-page'))
+            }
+        });
 
-                    //Change name
-                    clone.find('.ng-binding').eq(0).text("Game Filter Settings");
-
-                    //Prepare to add cotnent to extension
-                    var contentSection=clone.find('.section-content').eq(0);
-                    contentSection.empty();
-
-                    //Add percentage changing here
-                    var formGroup=$('<div class="form-group percentage-contaienr"><label class="text-label account-settings-label ng-binding">Like/Dislike Percentage</label><input class="form-control input-field ng-pristine ng-valid ng-empty ng-touched" id="percentageInput-RobloxModifier" placeholder="e.g. 25%"><span class="small ng-binding">If a games likes/total is below this percentage then it\'ll be removed.</span><div class="form-group col-sm-2 save-settings-container"><button id="SavePercentage-Roblox-Game-Filter-Settings" class="btn-control-sm acct-settings-btn ng-binding">Save</button></div></div>')
-                    formGroup.find('input').val(percentage);
-                    formGroup.appendTo(contentSection);
-
-                    //Do saving part
-                    formGroup.find('button').click(function(){
-                        var parsed=parseInt(formGroup.find('input').val(),10);
-                        chrome.storage.sync.set({ percentage: isNaN(parsed)?0+"%":parsed+"%" });
-                        formGroup.find('input').val(isNaN(parsed)?0+"%":parsed+"%");
+        chrome.storage.sync.get('revStatsEnabled', function(data) {
+            let rStats=data.revStatsEnabled;
+            if(rStats==undefined){
+                chrome.storage.sync.set({revStatsEnabled:false});
+            }
+            if(rStats){
+                main()
+            }
+        })
+        function main(){
+            let g,run,run2,total
+            setInterval(function(){
+                if(!g){
+                    $('.store-card').each(function(){
+                        if(g){return}
+                        if(!$(this).find('.store-card-add')[0]){
+                            g=true
+                            run()
+                            setInterval(function(){
+                                run()
+                            },120000)
+                        }
                     })
+                }
 
-                    clone.appendTo($(this).parent());
+                //Set total number
+                if(total!=undefined){
+                    $('#rbx-game-passes').find('h3').text("Passes for this game ("+total.toLocaleString()+" Robux)")
+                }
+            },1000)
 
-                    //Self-plug
-                    $('<span class="small ng-binding">Subscribe to <a href="https://youtube.com/c/SpooksHD" style="color: rgb(255,0,0)">SpooksHD</a></span>').appendTo($(this).parent());
+            let gameID=document.location.href.match(/\d+/)
+            if(gameID[0]){
+                $.get('https://api.roblox.com/Marketplace/ProductInfo?assetId='+gameID,function(data){
+                    if(data.IsForSale){
+                        let int
+                        int=setInterval(function(){
+                            if($('.game-creator')[0]){
+                                clearInterval(int)
+                                run2()
+                            }
+                        },25)
+                    }
+                })
+            }
+
+            run=function(){
+                total=0
+                $('.store-card').each(function(){
+                    if($(this).find('.store-card-add')[0]){return}
+                    let a=$(this).find('a')
+                    if(a[0]){
+                        let gamepassID=a.attr('href').match(/\d+/)
+                        if(gamepassID){
+                            let object=$(this)
+                            if(!object.find('.store-card-add')[0]){
+                                $.get('https://api.roblox.com/Marketplace/Game-Pass-Product-Info?gamepassId='+gamepassID[0],function(data){
+                                    if(data){
+                                        let totalRobuxMade=data.PriceInRobux*data.Sales
+                                        let stats=object.find('.revStatsSimple')
+                                        if(!stats[0]){
+                                            stats=object.find('.store-card-caption').clone()
+                                            stats.addClass('revStatsSimple')
+
+                                            //Remove things
+                                            stats.find('.store-card-footer').remove()
+                                            stats.find('.store-card-name').remove()
+
+                                            //Remove/Add Classes
+                                            stats.find('.store-card-price').attr('id','container')
+                                            stats.find('.store-card-price').removeClass('store-card-price')
+                                            stats.find('.text-robux').addClass('robux')
+                                            stats.find('.text-robux').removeClass('text-robux')
+
+                                            //Add to parent
+                                            stats.appendTo(object)
+                                        }
+
+
+                                        //Set text
+                                        stats.find('.robux').text(totalRobuxMade.toLocaleString())
+                                        total+=Number(totalRobuxMade)
+                                    }
+                                })
+                            }
+                        }
+                    }
+                })
+            }
+            run2=function(){
+                /*
+                <div class="game-creator"><span class="text-label">Sold</span> <a class="text-name" href="https://www.roblox.com/groups/group.aspx?gid=3537987">5,000 copies</a><span class="icon-robux-16x16" style="
+        margin-left: 5px;
+    "></span><span class="robux" style="
+        margin-left: 2px;
+    ">4,800</span></div>
+                */
+                $.get('https://api.roblox.com/Marketplace/ProductInfo?assetId='+gameID,function(data){
+                    let gameSales=$('#gameSales')
+                    if(!gameSales[0]){
+                        gameSales=$('.game-creator').clone()
+                        gameSales.attr('id','gameSales')
+
+                        //Change a few things
+                        gameSales.find('span').text("Sold")
+                        gameSales.find('a').remove()
+
+                        //Add new text
+                        gameSales.append($('<span class="text-name" id="copiesSold"></span>'))
+
+                        //Add robux icon and robux text
+                        gameSales.append($('<span class="icon-robux-16x16 gsRI"></span>'))
+                        gameSales.append($('<span class="gsRobux"></span>'))
+                        gameSales.appendTo($('.game-title-container'))
+                    }
+                    gameSales.find('#copiesSold').text(data.Sales.toLocaleString()+" copies")
+                    gameSales.find('.gsRobux').text((data.PriceInRobux*data.Sales).toLocaleString())
+                })
+            }
+        }
+    })
+}
+
+function revenue_stats_page(){
+    $('body').ready(function(){
+        chrome.storage.sync.get('revStatAlert', function(data) {
+            let goodToGo=data.revStatAlert
+            if(goodToGo==undefined){
+                chrome.storage.sync.set({ revStatAlert: true });
+                $(`
+                    <div class="col-xs-12 section-content game-main-content follow-button-enabled" style="
+                        height: 70px;
+                        padding: 0;
+                        min-height: 70px;
+                        margin-bottom: 5px;
+                        z-index: 1000;
+                    "><div style="
+                        width: 55px;
+                        height: 55px;
+                        display: inline-block;
+                        position: absolute;
+                        left: 10px;
+                        top: 8px;
+                        background-image: url(&quot;https://t4.rbxcdn.com/00ddd9996f2ecca4d5859eacc8115cb9&quot;);
+                        background-repeat: no-repeat;
+                        background-size: contain;
+                    "></div><div style="
+                        margin-top: 15px;
+                        display: inline-block;
+                        position: absolute;
+                        left: 75px;
+                        width: 90%;
+                        font-weight: bold;
+                    ">Hey! Looks like it's your first time visiting a page where we can show you a game's revenue using BetterBlox. This will only show one time, but just in case, if you wanted to enable revenue stats click <a style="font-weight: 400; color: #00A2FF; text-decoration: none;" href="https://www.roblox.com/my/account#!/info">here!</a></div></div>
+                `).prependTo($('#item-container'))
+            }
+        });
+    })
+
+    chrome.storage.sync.get('revStatsEnabled', function(data) {
+        let rStats=data.revStatsEnabled;
+        if(rStats==undefined){
+            chrome.storage.sync.set({revStatsEnabled:false});
+        }
+        if(rStats){
+            main()
+        }
+    })
+    function main(){
+        let gamepassID=document.location.href.match(/\d+/)[0]
+        function change(){
+            let object=$('#earnings')
+            if(!object[0]){
+                object=$('.item-type-field-container').clone()
+                object.attr('id','earnings')
+                object.find('span').remove()
+
+                //Add robux stuff
+                object.append($('<span class="icon-robux-16x16 gsRI"></span>'))
+                object.append($('<span class="gsRobux"></span>'))
+                object.css('margin-bottom','12px')
+                object.find('div').text('Earnings')
+                object.find('.gsRobux').text("Loading...")
+                object.insertBefore('.item-type-field-container')
+            }
+
+
+            $.get('https://api.roblox.com/Marketplace/Game-Pass-Product-Info?gamepassId='+gamepassID,function(data){
+                if(data){
+                    //Set text
+                    object.find('.gsRobux').text((data.PriceInRobux*data.Sales).toLocaleString())
                 }
             })
         }
+
+        change()
+        setInterval(function(){
+            change()
+        },120000)
     }
+}
+
+function settings_page(){
+    function main(data){
+        $('.ng-scope').each(function(index,value){
+            if($(this).find('.ng-binding').eq(0).text()=="Personal"){
+                var clone=$(this).clone();
+                clone.attr('window','roblox-game-filter-settings');
+
+                //Change name
+                clone.find('.ng-binding').eq(0).text("BetterBlox Settings");
+                clone.find('.ng-binding').eq(0).attr("id","betterbloxsettings")
+
+                //Prepare to add cotnent to extension
+                var contentSection=clone.find('.section-content').eq(0);
+                contentSection.empty();
+
+                //Add percentage changing here
+                var formGroup=$(`
+                    <div class="form-group percentage-contaienr" style="padding-bottom: 10px;">
+                        <label class="text-label account-settings-label ng-binding">
+                            Like/Dislike Percentage
+                        </label>
+                        <input class="form-control input-field ng-pristine ng-valid ng-empty ng-touched" id="percentageInput-RobloxModifier" placeholder="e.g. 25%">
+                        <span class="small ng-binding">
+                            If a games likes/total is below this percentage then it\'ll be removed.
+                        </span>
+                        <div class="form-group col-sm-2 save-settings-container">
+                            <button id="SavePercentage-Roblox-Game-Filter-Settings" class="btn-control-sm acct-settings-btn ng-binding">
+                                Save
+                            </button>
+                        </div>
+                    </div>
+                    <div class="section-content notifications-section" style="padding: 0; padding-top: 15px; margin: 0;">
+                        <span id="rev-toggle" class="btn-toggle receiver-destination-type-toggle" ng-click="toggleAccountPinEnabledSetting()" ng-class="{'on':accountPinContent.isEnabled}">
+                            <span class="toggle-flip">
+                            </span>
+                            <span id="toggle-on" class="toggle-on">
+                            </span>
+                            <span id="toggle-off" class="toggle-off">
+                            </span>
+                        </span>
+                        <div class="btn-toggle-label ng-binding" ng-show="accountPinContent.isEnabled" ng-bind="'Label.AccountPinEnabled'|translate">
+                            Revenue Stat Display `+(data.revenueStatsEnabled?"Enabled":"Disabled")+`
+                        </div>
+                    </div>
+                `)
+                formGroup.find('input').val(data.filterPercentage);
+                if(data.revenueStatsEnabled){
+                    formGroup.find('#rev-toggle').addClass('on')
+                }else{
+                    formGroup.find('#rev-toggle').removeClass('on')
+                }
+                formGroup.appendTo(contentSection);
+
+                //Do saving part
+                formGroup.find('button').click(function(){
+                    var parsed=parseInt(formGroup.find('input').val(),10);
+                    chrome.storage.sync.set({ percentage: isNaN(parsed)?0+"%":parsed+"%" });
+                    formGroup.find('input').val(isNaN(parsed)?0+"%":parsed+"%");
+                })
+
+                let bD
+                formGroup.find('#rev-toggle').click(function(){
+                    if(bD){return}
+                    data.revenueStatsEnabled=!data.revenueStatsEnabled
+                    bD=true
+                    chrome.storage.sync.set({ revStatsEnabled:data.revenueStatsEnabled });
+                    if(data.revenueStatsEnabled){
+                        $(this).addClass('on')
+                    }else{
+                        $(this).removeClass('on')
+                    }
+                    bD=false
+                })
+                formGroup.find('#rev-toggle').hover(function(){
+                    $(this).css('cusor','pointer')
+                },function(){
+                    $(this).css('cusor','auto')
+                })
+
+                clone.appendTo($(this).parent());
+
+                //Self-plug
+                $('<span class="small ng-binding">Subscribe to <a href="https://youtube.com/c/SpooksHD" style="color: rgb(255,0,0)">SpooksHD</a></span>').appendTo($(this).parent());
+            }
+        })
+    }
+    $('body').ready(function(){
+        let page
+        setInterval(function(){
+            if(page!=document.location.href){
+                page=document.location.href
+                if(page.match("info")){
+                    //Get settings
+                    chrome.storage.sync.get('percentage', function(data) {
+                        let p=data.percentage;
+                        if(p==undefined){
+                            chrome.storage.sync.set({ percentage: "25%" });
+                            p="25%";
+                        }
+                        chrome.storage.sync.get('revStatsEnabled', function(data) {
+                            let rStats=data.revStatsEnabled;
+                            if(rStats==undefined){
+                                chrome.storage.sync.set({revStatsEnabled:false});
+                            }
+                            main({
+                                revenueStatsEnabled:rStats,
+                                filterPercentage:p,
+                            })
+                        });
+                    });
+                }
+            }
+        },100)
+    })
 }
 
 if(document.location.href.match('my/groupadmin')){
     group_admin()
+}else if(document.location.href.match('games/')){
+    game_filter()
+    chrome.storage.sync.get('revStatsEnabled', function(data) {
+    })
+    revenue_stats()
+}else if(document.location.href.match('game-pass/')){
+    revenue_stats_page()
+}else if(document.location.href.match('my/account')){
+    settings_page()
 }else{
     game_filter()
 }

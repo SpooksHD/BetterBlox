@@ -86,3 +86,32 @@
 .userHolder table .description{
     width: 55%;
 }
+
+.revStatsSimple{
+    padding: 6px !important;
+}
+
+.revStatsSimple #container{
+    text-align: center;
+}
+
+.revStatsSimple .robux{
+    color: #02b757;
+    font-weight: 400;
+}
+
+#gameSales #copiesSold{
+    font-weight: 400;
+    color: #00A2FF;
+    text-decoration: none;
+}
+
+#gameSales .gsRI{
+    margin-left: 5px;
+}
+
+#gameSales .gsRobux{
+    color: #02b757;
+    font-weight: 400;
+    margin-left: 2px;
+}
