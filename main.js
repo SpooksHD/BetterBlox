@@ -79,63 +79,67 @@ function group_admin(){
             let day=$('<li class="revenueItem"><h2>Today</h2><p>Loading..</p></li>');
             let week=$('<li class="revenueItem"><h2>This Week</h2><p>Loading..</p></li>');
             let month=$('<li class="revenueItem"><h2>This Month</h2><p>Loading..</p></li>');
+            let year=$('<li class="revenueItem"><h2>This Year</h2><p>Loading..</p></li>');
+            let allTime=$('<li class="revenueItem"><h2>All Time</h2><p>Loading..</p></li>');
 
             //Get information for widgets
             let historyCount=0;
             let transactions=[];
             function g(){
-                $.get("https://www.roblox.com/currency/line-items/"+gid+"/"+historyCount,{},function(data,tS){
-                    if(!data.match('No records found.')){
-                        let dataObject=$(data);
+                try{
+                    $.get("https://www.roblox.com/currency/line-items/"+gid+"/"+historyCount,{},function(data,tS){
+                        if(!data.match('No records found.')){
+                            let dataObject=$(data);
 
-                        //Remove all profile images
-                        dataObject.find('.roblox-avatar-image').remove();
+                            //Remove all profile images
+                            dataObject.find('.roblox-avatar-image').remove();
 
-                        //Loop through and add to transactions
-                        dataObject.each(function(){
-                            if($(this).is('tr')){
-                                let game=$(this).find('.description').text().match(/for .+/);
-                                let game2=$(this).find('.description').text().match(/at .+/);
-                                let mdate=$(this).find('.date').text().trim().match(/\d+/g);
-                                let userName=$(this).find('.avatar').find('span').text().trim()
-                                if(!mdate){return}
-                                let month=mdate[0];
-                                let day=mdate[1];
-                                let year=mdate[2];
-                                let date=new Date('20'+year,month-1,day);
-                                transactions.push({
-                                    date: $(this).find('.date').text().trim(),
-                                    month: date.getMonth(),
-                                    day: date.getDate(),
-                                    week: date.getWeek(),
-                                    year: date.getFullYear(),
-                                    desc: $(this).find('.description').text().replace('Sold','').trim(),
-                                    amount: $(this).find('.amount').text().trim(),
-                                    game: game?game[0].trim():game2?game2[0].trim():undefined,
-                                    username: userName,
-                                });
-                            }
-                        })
+                            //Loop through and add to transactions
+                            dataObject.each(function(){
+                                if($(this).is('tr')){
+                                    let game=$(this).find('.description').text().match(/for .+/);
+                                    let game2=$(this).find('.description').text().match(/at .+/);
+                                    let mdate=$(this).find('.date').text().trim().match(/\d+/g);
+                                    let userName=$(this).find('.avatar').find('span').text().trim()
+                                    if(!mdate){return}
+                                    let month=mdate[0];
+                                    let day=mdate[1];
+                                    let year=mdate[2];
+                                    let date=new Date('20'+year,month-1,day);
+                                    transactions.push({
+                                        date: $(this).find('.date').text().trim(),
+                                        month: date.getMonth(),
+                                        day: date.getDate(),
+                                        week: date.getWeek(),
+                                        year: date.getFullYear(),
+                                        desc: $(this).find('.description').text().replace('Sold','').trim(),
+                                        amount: $(this).find('.amount').text().trim(),
+                                        game: game?game[0].trim():game2?game2[0].trim():undefined,
+                                        username: userName,
+                                    });
+                                }
+                            })
 
-                        //Add to history count
-                        historyCount+=20;
+                            //Add to history count
+                            historyCount+=20;
 
-                        //Just a reasonable check
-                        if(historyCount>300*20){
-                            return;
+                            //Go ahead and call the function again
+                            g();
                         }
-
-                        //Go ahead and call the function again
-                        g();
-                    }
-                })
+                    })
+                }catch(err){
+                    console.warn("Error: "+err)
+                    setTimeout(function(){
+                        g()
+                    },1500)
+                }
             }
             g();
 
             //Set widgets
             setInterval(function(){
                 let today=tzc(-6); //Convert current date to CST since all html endpoints return dates in CST
-                let robuxMadeToday=0,robuxMadeThisWeek=0,robuxMadeThisMonth=0;
+                let robuxMadeToday=0,robuxMadeThisWeek=0,robuxMadeThisMonth=0,robuxMadeThisYear=0,robuxMadeAllTime=0;
                 let last;
                 let todayWeek=today.getWeek();
                 let todayMonth=today.getMonth();
@@ -192,6 +196,11 @@ function group_admin(){
                     if(a.month==todayMonth && a.year==todayYear){//delta<=2.628e+6){
                         robuxMadeThisMonth+=parseInt(a.amount,10);
                     }
+                    if(a.year==todayYear){
+                        robuxMadeThisYear+=parseInt(a.amount,10)
+                    }
+
+                    robuxMadeAllTime+=parseInt(a.amount,10)
                 }
                 let usersInHolderAmount=0
                 for(let a in usersInHolder){
@@ -207,6 +216,8 @@ function group_admin(){
                 day.find('p').text('$R '+Math.round(robuxMadeToday*0.7).toLocaleString());
                 week.find('p').text('$R '+Math.round(robuxMadeThisWeek*0.7).toLocaleString());
                 month.find('p').text('$R '+Math.round(robuxMadeThisMonth*0.7).toLocaleString());
+                year.find('p').text('$R '+Math.round(robuxMadeThisYear*0.7).toLocaleString());
+                allTime.find('p').text('$R '+Math.round(robuxMadeAllTime*0.7).toLocaleString());
             },500);
 
             //Parent widgets
@@ -215,6 +226,8 @@ function group_admin(){
             day.appendTo(object);
             week.appendTo(object);
             month.appendTo(object);
+            year.appendTo(object)
+            allTime.appendTo(object)
 
             parent.prepend(userHolder)
             parent.prepend(userObject);
