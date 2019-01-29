@@ -4,6 +4,20 @@
     Note: Hello random person who is looking at this code, welcome to Hell :)
 */
 var print=console.log;
+let country
+
+chrome.storage.sync.get('countryDataNew', function(data) {
+    country = data.countryDataNew
+    if(country==undefined){
+        $.get("https://public.spookshd.com:8001/geo/get",res=>{
+            if(res && typeof res.result == "object"){
+                res=res.result
+                country=res
+                chrome.storage.sync.set({ countryDataNew: res })
+            }
+        })
+    }
+});
 
 function tzc(offset){
    let d=new Date()
@@ -362,8 +376,67 @@ function revenue_stats(){
                 main()
             }
         })
+
+        //Create robux to local currency thing
+        let setting=$(`
+            <div class="col-xs-12 section-content game-main-content follow-button-enabled" style="
+                padding: 0;
+                margin-top: 15px;
+                margin-bottom: 15px;
+                margin: 0;
+                min-height: 25px;
+                height: 30px;
+                margin-bottom: 5px;
+            ">
+                <span id="rev-toggle" class="btn-toggle receiver-destination-type-toggle" ng-click="toggleAccountPinEnabledSetting()" ng-class="{'on':accountPinContent.isEnabled}" style="
+                    transform: translate(-100%,-50%);
+                    top: 50%;
+                    position: absolute;
+                    left: 99.5%;
+                ">
+                    <span class="toggle-flip"></span>
+                    <span id="toggle-on" class="toggle-on"></span>
+                    <span id="toggle-off" class="toggle-off"></span>
+                </span>
+                <div class="btn-toggle-label ng-binding" ng-show="accountPinContent.isEnabled" ng-bind="'Label.AccountPinEnabled'|translate" style="
+                    text-align: right;
+                    transform: translate(-100%,-50%);
+                    top: 50%;
+                    position: absolute;
+                    left: 94.5%;
+                    height: 80%;
+                    width: 25%;
+                ">
+                    Robux to Local Currency
+                </div>
+            </div>
+        `)
+        setting.prependTo($('#game-detail-page'))
+
+        let settingEnabled
+        setting.find('#rev-toggle').click(function(){
+            settingEnabled=!settingEnabled
+            if(settingEnabled){
+                $(this).addClass('on')
+            }else{
+                $(this).removeClass('on')
+            }
+        })
+        setting.find('#rev-toggle').hover(function(){
+            $(this).css('cusor','pointer')
+        },function(){
+            $(this).css('cusor','auto')
+        })
+
         function main(){
             let g,run,run2,total
+            let language=navigator.languages?navigator.languages[0]:(navigator.language || navigator.userLanguage)
+            let currencyInfo,formatter
+            let objects=[]
+            let gameSalesObject
+
+            $('.game-title-container').css('width','325px')
+
             setInterval(function(){
                 if(!g){
                     $('.store-card').each(function(){
@@ -378,9 +451,48 @@ function revenue_stats(){
                     })
                 }
 
+                if(!formatter && country){
+                    formatter=new Intl.NumberFormat(language,{
+                        style: 'currency',
+                        currency: country.conversion[1].currency,
+                        minimumFractionDigits: 2
+                    })
+                }
+
+                for(let a=0; a<objects.length; a++){
+                    let b=objects[a]
+                    if(settingEnabled && country){
+                        b.object.find('.icon-robux-16x16').css('display','none')
+                        let usd=b.robux*0.0035
+                        let localCurrency=usd*country.conversion[0]
+                        b.object.find('.robux').text(formatter.format(localCurrency))
+                    }else{
+                        b.object.find('.icon-robux-16x16').css('display','inline-block')
+                        b.object.find('.robux').text(b.robux.toLocaleString())
+                    }
+                }
+
+                if($('#gameSales')[0] && gameSalesObject){
+                    if(settingEnabled && country){
+                        $('#gameSales').find('.icon-robux-16x16').css('display','none')
+                        let usd=gameSalesObject*0.0035
+                        let localCurrency=usd*country.conversion[0]
+                        $('#gameSales').find('.gsRobux').text(formatter.format(localCurrency)+" "+country.conversion[1].currency)
+                    }else{
+                        $('#gameSales').find('.icon-robux-16x16').css('display','inline-block')
+                        $('#gameSales').find('.gsRobux').text(gameSalesObject.toLocaleString())
+                    }
+                }
+
                 //Set total number
                 if(total!=undefined){
-                    $('#rbx-game-passes').find('h3').text("Passes for this game ("+Math.round(total*0.7).toLocaleString()+" Robux)")
+                    if(settingEnabled && country){
+                        let usd=Math.round(total*0.7)*0.0035
+                        let localCurrency=usd*country.conversion[0]
+                        $('#rbx-game-passes').find('h3').text("Passes for this game    ("+formatter.format(localCurrency)+" "+country.conversion[1].currency+")")
+                    }else{
+                        $('#rbx-game-passes').find('h3').text("Passes for this game    ("+Math.round(total*0.7).toLocaleString()+" Robux)")
+                    }
                 }
             },1000)
 
@@ -431,9 +543,18 @@ function revenue_stats(){
                                             stats.appendTo(object)
                                         }
 
-
-                                        //Set text
-                                        stats.find('.robux').text(Math.round(totalRobuxMade*0.7).toLocaleString())
+                                        let robux=Math.round(totalRobuxMade*0.7)
+                                        let good
+                                        for(let index in objects){
+                                            if(objects[index].object==stats){
+                                                objects[index].robux=robux
+                                                good=true
+                                                break
+                                            }
+                                        }
+                                        if(!good){
+                                            objects.push({robux:robux,object:stats})
+                                        }
                                         total+=Number(totalRobuxMade)
                                     }
                                 })
@@ -468,6 +589,7 @@ function revenue_stats(){
                         gameSales.append($('<span class="gsRobux"></span>'))
                         gameSales.appendTo($('.game-title-container'))
                     }
+                    gameSalesObject=Math.round(data.PriceInRobux*data.Sales*0.7)
                     gameSales.find('#copiesSold').text(data.Sales.toLocaleString()+" copies")
                     gameSales.find('.gsRobux').text(Math.round(data.PriceInRobux*data.Sales*0.7).toLocaleString())
                 })
@@ -521,8 +643,63 @@ function revenue_stats_page(){
             main()
         }
     })
+
+    //Create robux to local currency thing
+    let setting=$(`
+        <div class="col-xs-12 section-content game-main-content follow-button-enabled" style="
+            padding: 0;
+            margin-top: 15px;
+            margin-bottom: 15px;
+            margin: 0;
+            min-height: 25px;
+            height: 30px;
+            margin-bottom: 5px;
+            z-index: 1000;
+        ">
+            <span id="rev-toggle" class="btn-toggle receiver-destination-type-toggle" ng-click="toggleAccountPinEnabledSetting()" ng-class="{'on':accountPinContent.isEnabled}" style="
+                transform: translate(-100%,-50%);
+                top: 50%;
+                position: absolute;
+                left: 99.5%;
+            ">
+                <span class="toggle-flip"></span>
+                <span id="toggle-on" class="toggle-on"></span>
+                <span id="toggle-off" class="toggle-off"></span>
+            </span>
+            <div class="btn-toggle-label ng-binding" ng-show="accountPinContent.isEnabled" ng-bind="'Label.AccountPinEnabled'|translate" style="
+                text-align: right;
+                transform: translate(-100%,-50%);
+                top: 50%;
+                position: absolute;
+                left: 94.5%;
+                height: 80%;
+                width: 25%;
+            ">
+                Robux to Local Currency
+            </div>
+        </div>
+    `)
+    setting.prependTo($('#item-container'))
+
+    let settingEnabled
+    setting.find('#rev-toggle').click(function(){
+        settingEnabled=!settingEnabled
+        if(settingEnabled){
+            $(this).addClass('on')
+        }else{
+            $(this).removeClass('on')
+        }
+    })
+    setting.find('#rev-toggle').hover(function(){
+        $(this).css('cusor','pointer')
+    },function(){
+        $(this).css('cusor','auto')
+    })
+
     function main(){
         let gamepassID=document.location.href.match(/\d+/)[0]
+        let robuxEarned,formatter
+        let language=navigator.languages?navigator.languages[0]:(navigator.language || navigator.userLanguage)
         function change(){
             let object=$('#earnings')
             if(!object[0]){
@@ -543,7 +720,8 @@ function revenue_stats_page(){
             $.get('https://api.roblox.com/Marketplace/Game-Pass-Product-Info?gamepassId='+gamepassID,function(data){
                 if(data){
                     //Set text
-                    object.find('.gsRobux').text(Math.round(data.PriceInRobux*data.Sales*0.7).toLocaleString())
+                    robuxEarned=Math.round(data.PriceInRobux*data.Sales*0.7)
+                    object.find('.gsRobux').text(robuxEarned.toLocaleString())
                 }
             })
         }
@@ -552,6 +730,28 @@ function revenue_stats_page(){
         setInterval(function(){
             change()
         },120000)
+
+        setInterval(function(){
+            if(!formatter && country){
+                formatter=new Intl.NumberFormat(language,{
+                    style: 'currency',
+                    currency: country.conversion[1].currency,
+                    minimumFractionDigits: 2
+                })
+            }
+
+            if(robuxEarned){
+                if(settingEnabled && country){
+                    $('#earnings').find('.icon-robux-16x16').css('display','none')
+                    let usd=robuxEarned*0.0035
+                    let localCurrency=usd*country.conversion[0]
+                    $('#earnings').find('.gsRobux').text(formatter.format(localCurrency)+" "+country.conversion[1].currency)
+                }else{
+                    $('#earnings').find('.icon-robux-16x16').css('display','inline-block')
+                    $('#earnings').find('.gsRobux').text(robuxEarned.toLocaleString())
+                }
+            }
+        },1000)
     }
 }
 
