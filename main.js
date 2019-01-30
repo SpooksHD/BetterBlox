@@ -24,6 +24,22 @@ function tzc(offset){
    return new Date((d.getTime()+(d.getTimezoneOffset()*60000))+(3600000*offset))
 }
 
+let formatter,currencyInfo
+let language=navigator.languages?navigator.languages[0]:(navigator.language || navigator.userLanguage)
+function convertCurrency(robux){
+    if(!formatter && country){
+        formatter=new Intl.NumberFormat(language,{
+            style: 'currency',
+            currency: country.conversion[1].currency,
+            minimumFractionDigits: 2
+        })
+    }
+
+    let usd=robux*0.0035
+    let localCurrency=usd*country.conversion[0]
+    return formatter.format(localCurrency)
+}
+
 function group_admin(){
     var el = document.createElement('script'); //REALLY DIRTY HACK TO GET PRIVATE GROUP ID
     el.innerHTML = `
@@ -95,10 +111,67 @@ function group_admin(){
             let month=$('<li class="revenueItem"><h2>This Month</h2><p>Loading..</p></li>');
             let year=$('<li class="revenueItem"><h2>This Year</h2><p>Loading..</p></li>');
             let allTime=$('<li class="revenueItem"><h2>All Time</h2><p>Loading..</p></li>');
+            let localCurrencySetting=$(`
+                <div class="col-xs-12 section-content game-main-content follow-button-enabled" style="
+                    padding: 0;
+                    margin-top: 5px;
+                    margin-bottom: 15px;
+                    margin: 0;
+                    min-height: 25px;
+                    height: 30px;
+                    margin-bottom: 15px;
+                    background-color: #fff;
+                    position: relative;
+                    z-index: 1000;
+                ">
+                    <span id="rev-toggle" class="btn-toggle receiver-destination-type-toggle" ng-click="toggleAccountPinEnabledSetting()" ng-class="{'on':accountPinContent.isEnabled}" style="
+                        transform: translate(-100%,-50%);
+                        top: 50%;
+                        position: absolute;
+                        left: 99.5%;
+                        height: 20px !important;
+                    ">
+                        <span class="toggle-flip" style="
+                            box-sizing: inherit;
+                        "></span>
+                        <span id="toggle-on" class="toggle-on"></span>
+                        <span id="toggle-off" class="toggle-off" style="
+                            box-sizing: inherit;
+                        "></span>
+                    </span>
+                    <div class="btn-toggle-label ng-binding" ng-show="accountPinContent.isEnabled" ng-bind="'Label.AccountPinEnabled'|translate" style="
+                        text-align: right;
+                        transform: translate(-100%,-50%);
+                        top: 50%;
+                        position: absolute;
+                        left: 92.5%;
+                        height: 95%;
+                        width: 25%;
+                    ">
+                        Robux to Local Currency
+                    </div>
+                </div>
+            `)
+
+            let settingEnabled
+            localCurrencySetting.find('#rev-toggle').click(function(){
+                settingEnabled=!settingEnabled
+                if(settingEnabled){
+                    $(this).addClass('on')
+                }else{
+                    $(this).removeClass('on')
+                }
+            })
+            localCurrencySetting.find('#rev-toggle').hover(function(){
+                $(this).css('cusor','pointer')
+            },function(){
+                $(this).css('cusor','auto')
+            })
 
             //Get information for widgets
             let historyCount=0;
             let transactions=[];
+
             function g(){
                 try{
                     $.get("https://www.roblox.com/currency/line-items/"+gid+"/"+historyCount,{},function(data,tS){
@@ -172,6 +245,7 @@ function group_admin(){
                     }
                     let idKey=a.game+a.username+t
                     if(a.game && userSearch.val()!="" && a.username.toLowerCase().match(userSearch.val().toLowerCase())){
+                        let currencyTextToAdd=settingEnabled?convertCurrency(a.amount)+" "+country.conversion[1].currency:a.amount+" Robux"
                         if(!usersInHolder[idKey]){
                             let gameName
                             if(a.game.match('at place')){
@@ -186,11 +260,13 @@ function group_admin(){
                                     <td class="date">`+(Number(a.month)<=9?"0"+(Number(a.month)+1):Number(a.month)+1)+`/`+a.day+`/`+a.year+`</td>
                                     <td class="avatar">`+a.username+`</td>
                                     <td class="description">`+a.desc+`</td>
-                                    <td class="amount">`+a.amount+` Robux</td>
+                                    <td class="amount">`+currencyTextToAdd+`</td>
                                     <td class="ccgame">`+gameName+`</td>
                                 </tr>
                             `)
                             userHolder.find('tbody').prepend(usersInHolder[idKey])
+                        }else{
+                            usersInHolder[idKey].find(".amount").text(currencyTextToAdd)
                         }
                     }else{
                         if(usersInHolder[idKey]){
@@ -227,16 +303,25 @@ function group_admin(){
                 }else{
                     userHolder.css('display','block')
                 }
-                day.find('p').text('$R '+Math.round(robuxMadeToday*0.7).toLocaleString());
-                week.find('p').text('$R '+Math.round(robuxMadeThisWeek*0.7).toLocaleString());
-                month.find('p').text('$R '+Math.round(robuxMadeThisMonth*0.7).toLocaleString());
-                year.find('p').text('$R '+Math.round(robuxMadeThisYear*0.7).toLocaleString());
-                allTime.find('p').text('$R '+Math.round(robuxMadeAllTime*0.7).toLocaleString());
-            },500);
+                if(settingEnabled){
+                    day.find('p').text(convertCurrency(Math.round(robuxMadeToday*0.7))+" "+country.conversion[1].currency);
+                    week.find('p').text(convertCurrency(Math.round(robuxMadeThisWeek*0.7))+" "+country.conversion[1].currency);
+                    month.find('p').text(convertCurrency(Math.round(robuxMadeThisMonth*0.7))+" "+country.conversion[1].currency);
+                    year.find('p').text(convertCurrency(Math.round(robuxMadeThisYear*0.7))+" "+country.conversion[1].currency);
+                    allTime.find('p').text(convertCurrency(Math.round(robuxMadeAllTime*0.7))+" "+country.conversion[1].currency);
+                }else{
+                    day.find('p').text('$R '+Math.round(robuxMadeToday*0.7).toLocaleString());
+                    week.find('p').text('$R '+Math.round(robuxMadeThisWeek*0.7).toLocaleString());
+                    month.find('p').text('$R '+Math.round(robuxMadeThisMonth*0.7).toLocaleString());
+                    year.find('p').text('$R '+Math.round(robuxMadeThisYear*0.7).toLocaleString());
+                    allTime.find('p').text('$R '+Math.round(robuxMadeAllTime*0.7).toLocaleString());
+                }
+            },250);
 
             //Parent widgets
             userSearch.appendTo(userObject)
             searchbar.appendTo(searchObject);
+
             day.appendTo(object);
             week.appendTo(object);
             month.appendTo(object);
@@ -244,9 +329,10 @@ function group_admin(){
             allTime.appendTo(object)
 
             parent.prepend(userHolder)
-            parent.prepend(userObject);
-            parent.prepend(searchObject);
-            parent.prepend(object);
+            parent.prepend(userObject)
+            parent.prepend(searchObject)
+            parent.prepend(object)
+            parent.prepend(localCurrencySetting)
         }
         let timee;
         let clicked;
@@ -430,8 +516,6 @@ function revenue_stats(){
 
         function main(){
             let g,run,run2,total
-            let language=navigator.languages?navigator.languages[0]:(navigator.language || navigator.userLanguage)
-            let currencyInfo,formatter
             let objects=[]
             let gameSalesObject
 
@@ -463,9 +547,7 @@ function revenue_stats(){
                     let b=objects[a]
                     if(settingEnabled && country){
                         b.object.find('.icon-robux-16x16').css('display','none')
-                        let usd=b.robux*0.0035
-                        let localCurrency=usd*country.conversion[0]
-                        b.object.find('.robux').text(formatter.format(localCurrency))
+                        b.object.find('.robux').text(convertCurrency(b.robux)+" "+country.conversion[1].currency)
                     }else{
                         b.object.find('.icon-robux-16x16').css('display','inline-block')
                         b.object.find('.robux').text(b.robux.toLocaleString())
@@ -475,9 +557,7 @@ function revenue_stats(){
                 if($('#gameSales')[0] && gameSalesObject){
                     if(settingEnabled && country){
                         $('#gameSales').find('.icon-robux-16x16').css('display','none')
-                        let usd=gameSalesObject*0.0035
-                        let localCurrency=usd*country.conversion[0]
-                        $('#gameSales').find('.gsRobux').text(formatter.format(localCurrency)+" "+country.conversion[1].currency)
+                        $('#gameSales').find('.gsRobux').text(convertCurrency(gameSalesObject)+" "+country.conversion[1].currency)
                     }else{
                         $('#gameSales').find('.icon-robux-16x16').css('display','inline-block')
                         $('#gameSales').find('.gsRobux').text(gameSalesObject.toLocaleString())
@@ -487,9 +567,7 @@ function revenue_stats(){
                 //Set total number
                 if(total!=undefined){
                     if(settingEnabled && country){
-                        let usd=Math.round(total*0.7)*0.0035
-                        let localCurrency=usd*country.conversion[0]
-                        $('#rbx-game-passes').find('h3').text("Passes for this game    ("+formatter.format(localCurrency)+" "+country.conversion[1].currency+")")
+                        $('#rbx-game-passes').find('h3').text("Passes for this game    ("+convertCurrency(Math.round(total*0.7))+" "+country.conversion[1].currency+")")
                     }else{
                         $('#rbx-game-passes').find('h3').text("Passes for this game    ("+Math.round(total*0.7).toLocaleString()+" Robux)")
                     }
@@ -698,8 +776,7 @@ function revenue_stats_page(){
 
     function main(){
         let gamepassID=document.location.href.match(/\d+/)[0]
-        let robuxEarned,formatter
-        let language=navigator.languages?navigator.languages[0]:(navigator.language || navigator.userLanguage)
+        let robuxEarned
         function change(){
             let object=$('#earnings')
             if(!object[0]){
@@ -743,9 +820,7 @@ function revenue_stats_page(){
             if(robuxEarned){
                 if(settingEnabled && country){
                     $('#earnings').find('.icon-robux-16x16').css('display','none')
-                    let usd=robuxEarned*0.0035
-                    let localCurrency=usd*country.conversion[0]
-                    $('#earnings').find('.gsRobux').text(formatter.format(localCurrency)+" "+country.conversion[1].currency)
+                    $('#earnings').find('.gsRobux').text(convertCurrency(robuxEarned)+" "+country.conversion[1].currency)
                 }else{
                     $('#earnings').find('.icon-robux-16x16').css('display','inline-block')
                     $('#earnings').find('.gsRobux').text(robuxEarned.toLocaleString())
