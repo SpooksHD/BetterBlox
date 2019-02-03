@@ -390,6 +390,102 @@ function metaScoreForSmallGameThumbs(){
                                     p: 1,
                                 },
                                 {
+                                    f: /\/refer\?SortFilter=6/,
+                                    p: 4,
+                                },
+                                {
+                                    f: /\d+/,
+                                    p: 0,
+                                },
+                            ]
+
+                            let id
+
+                            for(let a of idFilter){
+                                let mat=$(this).attr('href').match(a.f)
+                                if(mat!=undefined){
+                                    mat=$(this).attr('href').match(/\d+/g)
+                                    //console.log(mat)
+                                    id=mat[a.p]
+                                    break
+                                }
+                            }
+
+                            //console.log(id)
+                            let ext='metaScoreD2'
+                            let uid=uuid()
+                            $(this).attr('uuid',uid)
+                            $(this).attr('placeid',id)
+                            new Promise((resolve,reject)=>{
+                                $.post('https://public.spookshd.com:8003/metacritic/get/score',{id:Number(id)},res=>{
+                                    resolve(res.result)
+                                })
+                            }).then(res=>{
+                                let div=$('<div class="scoreContainer"><div class="miniScore metaScore">'+(res!=undefined?res:"--")+'</div></div>')
+                                if(res==undefined){
+                                    div.find('.metaScore').addClass('noResults')
+                                }else if(res<=40){
+                                    div.find('.metaScore').addClass('badScore')
+                                }else if(res<=75){
+                                    div.find('.metaScore').addClass('okScore')
+                                }
+                                div.prependTo(parent)
+
+                                filtered[uid]=Date.now()
+                            })
+                        }else if($(this).attr('uuid') && filtered[$(this).attr('uuid')]){
+                            let last=filtered[$(this).attr('uuid')]
+                            let id=$(this).attr('placeid')
+                            let parent=$(this)
+                            if((Date.now()-last)/1000>=30){
+                                filtered[$(this).attr('uuid')]=Date.now()
+                                new Promise((resolve,reject)=>{
+                                    $.post('https://public.spookshd.com:8003/metacritic/get/score',{id:Number(id)},res=>{
+                                        resolve(res.result)
+                                    })
+                                }).then(res=>{
+                                    if(!parent.find('.metaScore')[0]){
+                                        $('<div class="scoreContainer"><div class="miniScore metaScore">'+(res!=undefined?res:"--")+'</div></div>').prependTo(parent.find('a'))
+                                    }
+
+                                    parent.find('.metaScore').text(res!=undefined?res:"--")
+                                    parent.find('.metaScore').removeClass('noResults')
+                                    parent.find('.metaScore').removeClass('badScore')
+                                    parent.find('.metaScore').removeClass('okScore')
+                                    if(res==undefined){
+                                        parent.find('.metaScore').addClass('noResults')
+                                    }else if(res<=40){
+                                        parent.find('.metaScore').addClass('badScore')
+                                    }else if(res<=75){
+                                        parent.find('.metaScore').addClass('okScore')
+                                    }
+                                    filtered[parent.attr('uuid')]=Date.now()
+                                })
+                            }
+                        }
+                    })
+                    $('.item-card-link').each(function(index,value){
+                        if($(this).find('.item-card-name') && !$(this).attr('uuid')){
+                            let parent=$(this)
+
+                            let idFilter=[
+                                {
+                                    f: /\/refer\?SortFilter=1/,
+                                    p: 4,
+                                },
+                                {
+                                    f: /\/refer\?Rec/,
+                                    p: 2,
+                                },
+                                {
+                                    f: /\/refer\?SortFilter=5/,
+                                    p: 1,
+                                },
+                                {
+                                    f: /\/refer\?SortFilter=6/,
+                                    p: 4,
+                                },
+                                {
                                     f: /\d+/,
                                     p: 0,
                                 },
@@ -1551,9 +1647,44 @@ function criticGamePage(){
                                                 </div>
                                                 <p style="
                                                     margin-top: 20px;
-                                                    ">`+a.review+`</p>
+                                                    "><span style="display: inline;" id="start"></span></p>
                                             </div>
                                         `)
+
+                                        let maxCap=400
+                                        if(a.review.length>maxCap){
+                                            let nStr=a.review.substr(0,a.review.lastIndexOf(' ', maxCap))
+                                            let rest=a.review.substring(nStr.length+1,a.review.length)
+                                            reviewObject.find('p').find('#start').text(nStr)
+                                            reviewObject.find('p').append($(`
+                                                <span id="dots">
+                                                    ...
+                                                </span>
+                                                <span id="more" style="display: none;">
+                                                    `+rest+`
+                                                </span>
+                                            `))
+                                            reviewObject.append($(`
+                                                <div id="expand">
+                                                    Read more
+                                                </div>
+                                            `))
+                                            let expanded
+                                            reviewObject.find('#expand').click(function(){
+                                                if(expanded){
+                                                    reviewObject.find('p').find('#dots').css('display','inline')
+                                                    reviewObject.find('p').find('#more').css('display','none')
+                                                    $(this).text('Read more')
+                                                }else{
+                                                    reviewObject.find('p').find('#dots').css('display','none')
+                                                    reviewObject.find('p').find('#more').css('display','inline')
+                                                    $(this).text('Read less')
+                                                }
+                                                expanded=!expanded
+                                            })
+                                        }else{
+                                            reviewObject.find('p').text(a.review)
+                                        }
 
                                         if(a.edited){
                                             reviewObject.find("#revised").css('display','inline-block')
@@ -1576,7 +1707,49 @@ function criticGamePage(){
                                         reviews[a.userid]=reviewObject
                                     })
                                 }else if(typeof reviews[a.userid] != "boolean"){
-                                    reviews[a.userid].find('p').text(a.review)
+                                    let maxCap=400
+                                    if(a.review.length>maxCap){
+                                        let nStr=a.review.substr(0,a.review.lastIndexOf(' ', maxCap))
+                                        let rest=a.review.substring(nStr.length+1,a.review.length)
+                                        reviews[a.userid].find('p').find('#start').text(nStr)
+                                        if(reviews[a.userid].find('p').find('#dots')[0]){
+                                            reviews[a.userid].find('p').find('#more').text(rest)
+                                        }else{
+                                            reviews[a.userid].find('p').append($(`
+                                                <span id="dots">
+                                                    ...
+                                                </span>
+                                                <span id="more" style="display: none;">
+                                                    `+rest+`
+                                                </span>
+                                            `))
+                                            reviews[a.userid].append($(`
+                                                <div id="expand">
+                                                    Read more
+                                                </div>
+                                            `))
+                                            let expanded
+                                            reviews[a.userid].find('#expand').click(function(){
+                                                if(expanded){
+                                                    reviews[a.userid].find('p').find('#dots').css('display','inline')
+                                                    reviews[a.userid].find('p').find('#more').css('display','none')
+                                                    $(this).text('Read more')
+                                                }else{
+                                                    reviews[a.userid].find('p').find('#dots').css('display','none')
+                                                    reviews[a.userid].find('p').find('#more').css('display','inline')
+                                                    $(this).text('Read less')
+                                                }
+                                                expanded=!expanded
+                                            })
+                                        }
+                                    }else{
+                                        if(reviews[a.userid].find('p').find('#dots')[0]){
+                                            reviews[a.userid].find('p').find('#dots').remove()
+                                            reviews[a.userid].find('p').find('#more').remove()
+                                            reviews[a.userid].find('#expand').remove()
+                                        }
+                                        reviews[a.userid].find('p').find('#start').text(a.review)
+                                    }
 
                                     for(let b of ['badScore','okScore','greatScore']){
                                         reviews[a.userid].find('#typeHolder').removeClass(b)
