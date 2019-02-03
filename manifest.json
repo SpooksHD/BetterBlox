@@ -1,6 +1,6 @@
 {
     "name": "BetterBlox",
-    "version": "4.0",
+    "version": "4.1",
     "description": "An attempt at a more organized, better looking, featured packed Roblox",
     "manifest_version": 2,
     "content_scripts": [{

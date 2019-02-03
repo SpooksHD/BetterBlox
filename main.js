@@ -2115,7 +2115,7 @@ function settings_page(){
                         </div>
                     </div>
                     <div class="section-content notifications-section" style="padding: 0; padding-top: 15px; margin: 0;">
-                        <span id="rev-toggle" class="btn-toggle receiver-destination-type-toggle" ng-click="toggleAccountPinEnabledSetting()" ng-class="{'on':accountPinContent.isEnabled}">
+                        <span id="rev-toggle" class="btn-toggle receiver-destination-type-toggle">
                             <span class="toggle-flip">
                             </span>
                             <span id="toggle-on" class="toggle-on">
@@ -2123,8 +2123,21 @@ function settings_page(){
                             <span id="toggle-off" class="toggle-off">
                             </span>
                         </span>
-                        <div class="btn-toggle-label ng-binding" ng-show="accountPinContent.isEnabled" ng-bind="'Label.AccountPinEnabled'|translate">
+                        <div class="btn-toggle-label ng-binding" id="statToggleText">
                             Revenue Stat Display `+(data.revenueStatsEnabled?"Enabled":"Disabled")+`
+                        </div>
+                    </div>
+                    <div class="section-content notifications-section" style="padding: 0; padding-top: 15px; margin: 0;">
+                        <span id="review-rev-toggle" class="btn-toggle receiver-destination-type-toggle">
+                            <span class="toggle-flip">
+                            </span>
+                            <span id="toggle-on" class="toggle-on">
+                            </span>
+                            <span id="toggle-off" class="toggle-off">
+                            </span>
+                        </span>
+                        <div class="btn-toggle-label ng-binding" id="reviewToggleText">
+                            Game Reviews/Scores `+(data.reviewEnabled?"Enabled":"Disabled")+`
                         </div>
                     </div>
                 `)
@@ -2133,6 +2146,11 @@ function settings_page(){
                     formGroup.find('#rev-toggle').addClass('on')
                 }else{
                     formGroup.find('#rev-toggle').removeClass('on')
+                }
+                if(data.reviewEnabled){
+                    formGroup.find('#review-rev-toggle').addClass('on')
+                }else{
+                    formGroup.find('#review-rev-toggle').removeClass('on')
                 }
                 formGroup.appendTo(contentSection);
 
@@ -2151,12 +2169,35 @@ function settings_page(){
                     chrome.storage.sync.set({ revStatsEnabled:data.revenueStatsEnabled });
                     if(data.revenueStatsEnabled){
                         $(this).addClass('on')
+                        $("#statToggleText").text("Revenue Stat Display Enabled")
                     }else{
                         $(this).removeClass('on')
+                        $("#statToggleText").text("Revenue Stat Display Disabled")
                     }
                     bD=false
                 })
                 formGroup.find('#rev-toggle').hover(function(){
+                    $(this).css('cusor','pointer')
+                },function(){
+                    $(this).css('cusor','auto')
+                })
+
+                let bD2
+                formGroup.find('#review-rev-toggle').click(function(){
+                    if(bD2){return}
+                    data.reviewEnabled=!data.reviewEnabled
+                    bD2=true
+                    chrome.storage.sync.set({ reviewEnabled:data.reviewEnabled });
+                    if(data.reviewEnabled){
+                        $(this).addClass('on')
+                        $("#reviewToggleText").text("Game Reviews/Scores Enabled")
+                    }else{
+                        $(this).removeClass('on')
+                        $("#reviewToggleText").text("Game Reviews/Scores Disabled")
+                    }
+                    bD2=false
+                })
+                formGroup.find('#review-rev-toggle').hover(function(){
                     $(this).css('cusor','pointer')
                 },function(){
                     $(this).css('cusor','auto')
@@ -2185,12 +2226,21 @@ function settings_page(){
                         chrome.storage.sync.get('revStatsEnabled', function(data) {
                             let rStats=data.revStatsEnabled;
                             if(rStats==undefined){
-                                chrome.storage.sync.set({revStatsEnabled:false});
+                                chrome.storage.sync.set({revStatsEnabled:true});
+                                rStats=true
                             }
-                            main({
-                                revenueStatsEnabled:rStats,
-                                filterPercentage:p,
-                            })
+                            chrome.storage.sync.get('reviewEnabled', function(data) {
+                                let vStats=data.reviewEnabled;
+                                if(vStats==undefined){
+                                    chrome.storage.sync.set({reviewEnabled:true});
+                                    vStats=true
+                                }
+                                main({
+                                    reviewEnabled:vStats,
+                                    revenueStatsEnabled:rStats,
+                                    filterPercentage:p,
+                                })
+                            });
                         });
                     });
                 }
