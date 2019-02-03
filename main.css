@@ -115,3 +115,117 @@
     font-weight: 400;
     margin-left: 2px;
 }
+
+.scoreContainer {
+    position: absolute;
+    z-index: 3;
+    right: 9px;
+    top: 9px;
+    font-size: 22px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    vertical-align: baseline;
+    background: transparent;
+    border-color: #ccc;
+    border-style: solid;
+    line-height: 1.2;
+    border-collapse: collapse;
+    border-spacing: 0;
+    color: inherit;
+    font-weight: bold;
+    text-align: center;
+    white-space: nowrap;
+    z-index: 100;
+}
+
+/*
+    USE THIS WHEN ADDING THE CRITIC RATING
+    <div class="scoreContainer"><div class="miniScore metaScore">85</div></div>
+*/
+
+.miniScore {
+    font-size: 15px !important;
+}
+
+.metaScore {
+    display: block;
+    background-color: #6c3;
+    font-size: 25px;
+    vertical-align: middle;
+    text-align: center;
+    color: #fff!important;
+    font-family: Arial,Helvetica,sans-serif;
+    font-style: normal!important;
+    font-weight: bold!important;
+    height: 2em;
+    width: 2em;
+    line-height: 2em;
+    border-radius: 6px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    border-color: #ccc;
+    border-style: solid;
+    white-space: nowrap;
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.noResults {
+    background-color: #ccc!important;
+}
+
+.okScore {
+    background-color: #fc3!important;
+}
+
+.greatScore {
+    background-color: #6c3;
+}
+
+.badScore{
+    background-color: #f00!important;
+}
+
+.rbx-tab-modified {
+    width: calc(100%/4)!important;
+}
+
+#upvote:hover{
+    cursor:pointer;
+}
+
+#downvote:hover{
+    cursor:pointer;
+}
+
+.icon-mixed {
+    background-image: url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/mixed.png);
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    width: 45px;
+    height: 28px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.icon-mixed:hover {
+    background-image: url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/mixedFilled.png);
+    cursor:pointer;
+}
+
+.icon-mixed.selected{
+    background-image: url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/mixedFilled.png);
+}
+
+#expand {
+    color: #00A2FF;
+}
+
+#expand:hover {
+    cursor: pointer;
+}

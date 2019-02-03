@@ -1,11 +1,11 @@
 {
     "name": "BetterBlox",
-    "version": "3.4",
+    "version": "4.0",
     "description": "An attempt at a more organized, better looking, featured packed Roblox",
     "manifest_version": 2,
     "content_scripts": [{
         "css": ["main.css"],
-        "js": ["jquery.js","main.js"],
+        "js": ["uuid.js","jquery.js","main.js"],
         "matches": ["https://*.roblox.com/*"]
     }],
     "permissions": [
@@ -16,5 +16,12 @@
         "16": "icon16.png",
         "48": "icon48.png",
         "128": "icon128.png"
-    }
+    },
+    "web_accessible_resources": [
+        "mixed.png",
+        "mixedFilled.png",
+        "mixedfull.png",
+        "thumbsup.png",
+        "thumbsdown.png"
+    ]
 }

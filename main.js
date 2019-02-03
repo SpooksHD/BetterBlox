@@ -1,6 +1,6 @@
 /*
     Author: Spooks_HD (@Spooksletsky on twitter)
-    Last Update: Finished off group revenue filtering mechanics
+    Last Update: I'm not going to bother updating this, just look at the git
     Note: Hello random person who is looking at this code, welcome to Hell :)
 */
 var print=console.log;
@@ -354,6 +354,1259 @@ function group_admin(){
                 ready(savedData);
             }
         },50)
+    })
+}
+
+function metaScoreForSmallGameThumbs(){
+    $('body').ready(function(){
+        new Promise((resolve,reject)=>{
+            chrome.storage.sync.get('metaEnabled', data=>{
+                let mE = data.metaEnabled;
+                if(mE==undefined){
+                    chrome.storage.sync.set({ metaEnabled: false });
+                    mE=false
+                }
+                resolve(mE)
+            });
+        }).then(res=>{
+            if(true){
+                let filtered={}
+                setInterval(function(){
+                    $('.game-card-link').each(function(index,value){
+                        if($(this).find('.game-name-title') && !$(this).attr('uuid')){
+                            let parent=$(this)
+
+                            let idFilter=[
+                                {
+                                    f: /\/refer\?SortFilter=1/,
+                                    p: 4,
+                                },
+                                {
+                                    f: /\/refer\?Rec/,
+                                    p: 2,
+                                },
+                                {
+                                    f: /\/refer\?SortFilter=5/,
+                                    p: 1,
+                                },
+                                {
+                                    f: /\d+/,
+                                    p: 0,
+                                },
+                            ]
+
+                            let id
+
+                            for(let a of idFilter){
+                                let mat=$(this).attr('href').match(a.f)
+                                if(mat!=undefined){
+                                    mat=$(this).attr('href').match(/\d+/g)
+                                    //console.log(mat)
+                                    id=mat[a.p]
+                                    break
+                                }
+                            }
+
+                            //console.log(id)
+                            let ext='metaScoreD2'
+                            let uid=uuid()
+                            $(this).attr('uuid',uid)
+                            $(this).attr('placeid',id)
+                            new Promise((resolve,reject)=>{
+                                $.post('https://public.spookshd.com:8003/metacritic/get/score',{id:Number(id)},res=>{
+                                    resolve(res.result)
+                                })
+                            }).then(res=>{
+                                let div=$('<div class="scoreContainer"><div class="miniScore metaScore">'+(res!=undefined?res:"--")+'</div></div>')
+                                if(res==undefined){
+                                    div.find('.metaScore').addClass('noResults')
+                                }else if(res<=40){
+                                    div.find('.metaScore').addClass('badScore')
+                                }else if(res<=75){
+                                    div.find('.metaScore').addClass('okScore')
+                                }
+                                div.prependTo(parent)
+
+                                filtered[uid]=Date.now()
+                            })
+                        }else if($(this).attr('uuid') && filtered[$(this).attr('uuid')]){
+                            let last=filtered[$(this).attr('uuid')]
+                            let id=$(this).attr('placeid')
+                            let parent=$(this)
+                            if((Date.now()-last)/1000>=30){
+                                filtered[$(this).attr('uuid')]=Date.now()
+                                new Promise((resolve,reject)=>{
+                                    $.post('https://public.spookshd.com:8003/metacritic/get/score',{id:Number(id)},res=>{
+                                        resolve(res.result)
+                                    })
+                                }).then(res=>{
+                                    if(!parent.find('.metaScore')[0]){
+                                        $('<div class="scoreContainer"><div class="miniScore metaScore">'+(res!=undefined?res:"--")+'</div></div>').prependTo(parent.find('a'))
+                                    }
+
+                                    parent.find('.metaScore').text(res!=undefined?res:"--")
+                                    parent.find('.metaScore').removeClass('noResults')
+                                    parent.find('.metaScore').removeClass('badScore')
+                                    parent.find('.metaScore').removeClass('okScore')
+                                    if(res==undefined){
+                                        parent.find('.metaScore').addClass('noResults')
+                                    }else if(res<=40){
+                                        parent.find('.metaScore').addClass('badScore')
+                                    }else if(res<=75){
+                                        parent.find('.metaScore').addClass('okScore')
+                                    }
+                                    filtered[parent.attr('uuid')]=Date.now()
+                                })
+                            }
+                        }
+                    })
+                },250)
+            }
+        })
+    })
+}
+
+function criticGamePage(){
+    $('body').ready(function(){
+        new Promise((resolve,reject)=>{
+            chrome.storage.sync.get('metaEnabled', data=>{
+                let mE = data.metaEnabled;
+                if(mE==undefined){
+                    chrome.storage.sync.set({ metaEnabled: false });
+                    mE=false
+                }
+                resolve(mE)
+            });
+        }).then(res=>{
+            if(true){
+                let filtered={}
+                let div
+                let id=document.location.href.match(/\d+/)[0]
+                //console.log(id)
+
+                $('.nav-tabs').children().each(function(){
+                    $(this).addClass('rbx-tab-modified')
+                })
+
+                let reviewTab=$('#tab-game-instances').clone()
+                reviewTab.prop('id','tab-reviews')
+                reviewTab.find('span').text("Reviews")
+                reviewTab.find('a').attr('href','#!/reviews')
+                reviewTab.appendTo($('.nav-tabs'))
+
+                //Create tab-pane
+                let pane=$('#about').clone()
+                pane.empty()
+                pane.prop('id','reviews')
+                pane.removeClass('active')
+
+                //Add review stats section
+                let reviewStats=$(`
+                    <div class="section game-about-container">
+                        <div class="section-content remove-panel border-bottom" id="criticStats" style="
+                            display: flex;
+                            margin-bottom: 0px;
+                            ">
+                            <div id="critic" style="
+                                height: 200px;
+                                width: 175px;
+                                display: inline-block;
+                                display: inline-block;
+                                margin-left: auto;
+                                margin-right: 5px;
+                                ">
+                                <div style="
+                                    display: flex;
+                                    padding-bottom: 10px;
+                                    ">
+                                    <div id="criticScore" style="
+                                        width: 3em;
+                                        height: 3em;
+                                        margin-left: auto;
+                                        margin-right: auto;
+                                        text-align: center;
+                                        line-height: 3em;
+                                        color: rgb(255, 255, 255) !important;
+                                        font-style: normal !important;
+                                        font-weight: bold !important;
+                                        white-space: nowrap;
+                                        font-family: Arial, Helvetica, sans-serif;
+                                        vertical-align: middle;
+                                        font-size: 50px;
+                                        display: inline-block;
+                                        ">85</div>
+                                </div>
+                                <div id="criticScoreText" style="
+                                    display: inline-block;
+                                    color: black;
+                                    text-align: center;
+                                    width: 100%;
+                                    font-weight: bold;
+                                    ">Overwhelmingly Positive</div>
+                                <div style="
+                                    display: inline-block;
+                                    color: black;
+                                    text-align: center;
+                                    width: 100%;
+                                    font-weight: bold;
+                                    "><span id="criticScoreAmount" style="
+                                    color: #00A2FF;
+                                    ">500</span> Critic Reviews</div>
+                            </div>
+                            <div id="uesr" style="
+                                height: 200px;
+                                width: 175px;
+                                display: inline-block;
+                                display: inline-block;
+                                margin-right: auto;
+                                margin-left: 5px;
+                                ">
+                                <div style="
+                                    display: flex;
+                                    padding-bottom: 10px;
+                                    ">
+                                    <div id="userScore" style="
+                                        width: 3em;
+                                        height: 3em;
+                                        margin-left: auto;
+                                        margin-right: auto;
+                                        text-align: center;
+                                        line-height: 3em;
+                                        color: rgb(255, 255, 255) !important;
+                                        font-style: normal !important;
+                                        font-weight: bold !important;
+                                        white-space: nowrap;
+                                        font-family: Arial, Helvetica, sans-serif;
+                                        vertical-align: middle;
+                                        font-size: 50px;
+                                        display: inline-block;
+                                        border-radius: 100%;
+                                        ">85</div>
+                                </div>
+                                <div id="userScoreText" style="
+                                    display: inline-block;
+                                    color: black;
+                                    text-align: center;
+                                    width: 100%;
+                                    font-weight: bold;
+                                    ">Overwhelmingly Positive</div>
+                                <div style="
+                                    display: inline-block;
+                                    color: black;
+                                    text-align: center;
+                                    width: 100%;
+                                    font-weight: bold;
+                                    "><span id="userScoreAmount" style="
+                                    color: #00A2FF;
+                                    ">500</span> User Reviews</div>
+                            </div>
+                        </div>
+                    </div>
+                `)
+                let reviewSection=$(`
+                    <div class="section-content remove-panel border-bottom" id="reviews" style="
+                        display: flex;
+                        margin-bottom: 0px;
+                        ">
+                        <div id="criticReviewSection" style="
+                            width: 48%;
+                            margin-right: 1.5%;
+                            ">
+                            <div class="container-header">
+                                <h3>Critic Reviews</h3>
+                            </div>
+                        </div>
+                        <div id="userReviewSection" style="
+                            width: 48%;
+                            margin-left: 1.5%;
+                            ">
+                            <div class="container-header">
+                                <h3>User Reviews</h3>
+                            </div>
+                        </div>
+                    </div>
+                `)
+                let reviews={}
+
+                let reviewCenter,editCenter
+
+                reviewStats.prependTo(pane)
+                reviewSection.appendTo(pane)
+
+                pane.appendTo($('.rbx-tab-content'))
+
+                reviewTab.click(function(){
+                    if(!reviewTab.hasClass('active')){
+                        $('.nav-tabs').children().each(function(){
+                            $(this).removeClass('active')
+                        })
+
+                        $('.rbx-tab-content').children().each(function(){
+                            $(this).removeClass('active')
+                        })
+
+                        pane.addClass('active')
+                        reviewTab.addClass('active')
+                    }
+                })
+
+                if(document.location.href.match('#!/reviews')){
+                    if(!reviewTab.hasClass('active')){
+                        $('.nav-tabs').children().each(function(){
+                            $(this).removeClass('active')
+                        })
+
+                        $('.rbx-tab-content').children().each(function(){
+                            $(this).removeClass('active')
+                        })
+
+                        pane.addClass('active')
+                        reviewTab.addClass('active')
+                    }
+                }
+
+                function getScoreLabel(score,reviews){
+                    let requiredForSpecialCase=25
+                    if(score>=95 && reviews>=requiredForSpecialCase){
+                        return "Overwhelmingly Positive"
+                    }else if(score>=80 && reviews>=requiredForSpecialCase){
+                        return "Very Positive"
+                    }else if(score>=80 && reviews<requiredForSpecialCase){
+                        return "Positive"
+                    }else if(score>=70){
+                        return "Mostly Positive"
+                    }else if(score>=40){
+                        return "Mixed"
+                    }else if(score>=20  && reviews>=requiredForSpecialCase){
+                        return "Mostly Negative"
+                    }else if(score>=20 && reviews<requiredForSpecialCase){
+                        return "Negative"
+                    }else if(score>=0 && reviews<requiredForSpecialCase){
+                        return "Mostly Negative"
+                    }else if(score>=0){
+                        return "Overwhelmingly Negative"
+                    }
+                }
+
+                let savedUserId
+                let voteObject
+                let ourData
+                let currentlyEditing
+                function update(){
+                    new Promise((resolve,reject)=>{
+                        $.post('https://public.spookshd.com:8003/metacritic/get/score',{id:Number(id)},res=>{
+                            //console.log(res)
+                            resolve(res.result)
+                        })
+                    }).then(res=>{
+                        if(!div){
+                            div=$('<div class="scoreContainer"><div class="metaScore">'+(res!=undefined?res:"--")+'</div></div>')
+                            div.prependTo($('#carousel-game-details'))
+                        }
+
+                        div.find('.metaScore').text(res!=undefined?res:"--")
+                        div.find('.metaScore').removeClass('noResults')
+                        div.find('.metaScore').removeClass('badScore')
+                        div.find('.metaScore').removeClass('okScore')
+                        if(res==undefined){
+                            div.find('.metaScore').addClass('noResults')
+                        }else if(Number(res)<=40){
+                            div.find('.metaScore').addClass('badScore')
+                        }else if(Number(res)<=75){
+                            div.find('.metaScore').addClass('okScore')
+                        }
+                    })
+
+                    new Promise((resolve,reject)=>{
+                        $.post('https://public.spookshd.com:8003/metacritic/get/profile',{id:Number(id)},res=>{
+                            if(!savedUserId){
+                                let username=$('.age-bracket-label-username').text().replace(": ","")
+                                $.get('https://api.roblox.com/users/get-by-username?username='+username,res2=>{
+                                    savedUserId=res2.Id
+                                    resolve(res.result)
+                                })
+                            }else{
+                                resolve(res.result)
+                            }
+                        })
+                    }).then(res=>{
+                        $('#criticScoreText').text((res!=undefined && res.criticScore!=undefined)?getScoreLabel(res.criticScore,res.criticReviews.length):"No Results")
+                        $('#userScoreText').text((res!=undefined && res.userScore!=undefined)?getScoreLabel(res.userScore,res.userReviews.length):"No Results")
+                        $('#criticScoreAmount').text((res!=undefined && res.criticScore!=undefined)?res.criticReviews.length:0)
+                        $('#userScoreAmount').text((res!=undefined && res.userScore!=undefined)?res.userReviews.length:0)
+                        $('#criticScore').text((res!=undefined && res.criticScore!=undefined)?res.criticScore:"--")
+                        $('#userScore').text((res!=undefined && res.userScore!=undefined)?res.userScore:"--")
+                        for(let a of ['noResults','badScore','okScore','greatScore']){
+                            $('#criticScore').removeClass(a)
+                            $('#userScore').removeClass(a)
+                        }
+
+                        if(res==undefined){
+                            //Do some defaults
+                            $('#criticScore').addClass('noResults')
+                            $('#userScore').addClass('noResults')
+                        }else{
+                            if(res.userScore!=undefined){
+                                for(let a of [{c:'badScore',a:40},{c:'okScore',a:75},{c:'greatScore',a:100}]){
+                                    if(res.userScore<=a.a){
+                                        $('#userScore').addClass(a.c)
+                                        break
+                                    }
+                                }
+                            }else{
+                                $('#userScore').addClass('noResults')
+                            }
+                            if(res.criticScore!=undefined){
+                                for(let a of [{c:'badScore',a:40},{c:'okScore',a:75},{c:'greatScore',a:100}]){
+                                    if(res.criticScore<=a.a){
+                                        $('#criticScore').addClass(a.c)
+                                        break
+                                    }
+                                }
+                            }else{
+                                $('#criticScore').addClass('noResults')
+                            }
+                        }
+
+                        //Do some check
+                        let canWriteAReview=true
+                        if(res!=undefined){
+                            if(res.criticReviews){
+                                for(let t=0; t<res.criticReviews.length; t++){
+                                    if(res.criticReviews[t].userid==savedUserId){
+                                        canWriteAReview=false
+                                        break
+                                    }
+                                }
+                            }
+                            if(res.userReviews){
+                                for(let t=0; t<res.userReviews.length; t++){
+                                    if(res.userReviews[t].userid==savedUserId){
+                                        canWriteAReview=false
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                        if(canWriteAReview){
+                            if(!reviewCenter){
+                                reviewCenter=$(`
+                                    <div class="section-content remove-panel border-bottom" id="reviewCenter" style="
+                                        display: block;
+                                        margin-bottom: 0px;
+                                        ">
+                                        <div class="container-header">
+                                            <h3>Write A Review</h3>
+                                        </div>
+                                        <div style="
+                                            display: block;
+                                            float: right;
+                                            color: rgb(255, 167, 0);
+                                            font-size: 18px;
+                                            font-weight: bold;
+                                            display: none;
+                                        " id="error">There was an error</div>
+                                        <div class="form-group"><textarea id="reviewData" class="form-control input-field ng-pristine ng-valid ng-empty ng-valid-maxlength ng-touched" maxlength="1000" placeholder="Think of something that might point out the good/bad aspects of a game..." style="
+                                            height: 82px;
+                                            resize: none;
+                                            "></textarea></div>
+                                        <button id="postButton" class="btn-secondary-md group-form-button ng-binding" style="
+                                            float: right;
+                                            " disabled="disabled">Post Review</button>
+                                        <div style="
+                                            display: flex;
+                                            float: right;
+                                            width: 115px;
+                                            height: auto;
+                                            padding: 9px 9px;
+                                            ">
+                                            <div class="upvote" style="
+                                                display: inline-block;
+                                                margin: auto;
+                                                ">
+                                                <span class="icon-like " id="upvote"></span>
+                                                <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 74.55%;display: block; opacity:0;">
+                                                    <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                    <div class="tooltip-inner">Upvote</div>
+                                                </div>
+                                            </div>
+                                            <div class="upvote" style="
+                                                display: inline-block;
+                                                margin: auto;
+                                                ">
+                                                <span class="icon-mixed selected" id="mixedvote"></span>
+                                                <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 78.75%;display: block; opacity:0;">
+                                                    <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                    <div class="tooltip-inner">Mixed</div>
+                                                </div>
+                                            </div>
+                                            <div class="downvote" style="
+                                                display: inline-block;
+                                                margin: auto;
+                                                ">
+                                                <span class="icon-dislike " id="downvote"></span>
+                                                <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 81.25%;display: block; opacity:0;">
+                                                    <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                    <div class="tooltip-inner">Downvote</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `)
+                                reviewCenter.insertAfter(reviewStats)
+
+                                let option,netInterval,typed
+                                reviewCenter.find('#upvote').click(function(){
+                                    if(!option){
+                                        option=true
+                                        $(this).addClass("selected")
+                                        reviewCenter.find('#downvote').removeClass("selected")
+                                        reviewCenter.find('#mixedvote').removeClass("selected")
+                                    }
+                                })
+                                reviewCenter.find('#mixedvote').click(function(){
+                                    if(option!=undefined){
+                                        option=undefined
+                                        $(this).addClass("selected")
+                                        reviewCenter.find('#upvote').removeClass("selected")
+                                        reviewCenter.find('#downvote').removeClass("selected")
+                                    }
+                                })
+                                reviewCenter.find('#downvote').click(function(){
+                                    if(option==undefined || option){
+                                        option=false
+                                        $(this).addClass("selected")
+                                        reviewCenter.find('#upvote').removeClass("selected")
+                                        reviewCenter.find('#mixedvote').removeClass("selected")
+                                    }
+                                })
+
+                                let tweenInTime=250
+                                let tweenOutTime=500
+                                reviewCenter.find('#downvote').hover(function(){
+                                    $(this).parent().find('div').animate({opacity:1},tweenInTime)
+                                },function(){
+                                    $(this).parent().find('div').animate({opacity:0},tweenOutTime)
+                                })
+                                reviewCenter.find('#mixedvote').hover(function(){
+                                    $(this).parent().find('div').animate({opacity:1},tweenInTime)
+                                },function(){
+                                    $(this).parent().find('div').animate({opacity:0},tweenOutTime)
+                                })
+                                reviewCenter.find('#upvote').hover(function(){
+                                    $(this).parent().find('div').animate({opacity:1},tweenInTime)
+                                },function(){
+                                    $(this).parent().find('div').animate({opacity:0},tweenOutTime)
+                                })
+
+                                let focused
+                                let buttonErorr
+                                reviewCenter.find('textarea').focus(function(){
+                                    focused=true
+                                })
+
+                                let buttonBusy
+                                reviewCenter.find('button').click(function(){
+                                    if((reviewCenter.find('textarea').val()=="" || reviewCenter.find('textarea').val().length>=30) && !buttonBusy){
+                                        buttonBusy=true
+                                        new Promise((resolve,reject)=>{
+                                            new Promise((r,r2)=>{
+                                                let username=$('.age-bracket-label-username').text().replace(": ","")
+                                                $.get('https://api.roblox.com/users/get-by-username?username='+username,res=>{
+                                                    //console.log(res)
+                                                    r(res)
+                                                })
+                                            }).then(res=>{
+                                                $.post('https://public.spookshd.com:8003/metacritic/post/review',{
+                                                    id:Number(id),
+                                                    review:reviewCenter.find('textarea').val(),
+                                                    vote:option==undefined?"mixed":option?"upvote":"downvote",
+                                                    userid:Number(res.Id)
+                                                },res=>{
+                                                    //console.log(res)
+                                                    resolve(res.result)
+                                                })
+                                            })
+                                        }).then(res=>{
+                                            //console.log(res)
+                                            if(res){
+                                                clearInterval(netInterval)
+                                                reviewCenter.remove()
+                                                update()
+                                            }
+                                            buttonBusy=false
+                                        })
+                                    }
+                                })
+
+                                netInterval=setInterval(function(){
+                                    let textEmpty=reviewCenter.find('textarea').val()==""
+                                    let textNotLongEnough=reviewCenter.find('textarea').val().length<30
+                                    if(textEmpty || textNotLongEnough){
+                                        reviewCenter.find('button').attr("disabled","disabled")
+                                    }else if(!textNotLongEnough && !textEmpty){
+                                        reviewCenter.find('button').removeAttr("disabled")
+                                    }
+
+                                    if(reviewCenter.find('textarea').val().length<30 && focused){
+                                        reviewCenter.find('#error').text("30 Characters minimum")
+                                        reviewCenter.find('#error').css('display','inline-block')
+                                    }else{
+                                        reviewCenter.find('#error').css('display','none')
+                                    }
+                                },50)
+                            }
+                        }else{
+                            if(!editCenter){
+                                editCenter=$(`
+                                    <div class="section-content remove-panel border-bottom" id="editCenter" style="
+                                        display: block;
+                                        margin-bottom: 0px;
+                                        ">
+                                        <div class="container-header">
+                                            <h3>Your Review On This Game</h3>
+                                        </div>
+                                        <div style="
+                                            display: block;
+                                            float: right;
+                                            color: rgb(255, 167, 0);
+                                            font-size: 18px;
+                                            font-weight: bold;
+                                            display: none;
+                                        " id="error">There was an error</div>
+                                        <div class="form-group"><textarea id="reviewData" class="form-control input-field ng-pristine ng-valid ng-empty ng-valid-maxlength ng-touched" maxlength="1000" placeholder="Think of something that might point out the good/bad aspects of a game..." disabled style="
+                                            height: 82px;
+                                            resize: none;
+                                            "></textarea></div>
+                                        <button id="editButton" class="btn-secondary-md group-form-button ng-binding" style="
+                                            float: right;
+                                            ">Edit Review</button>
+                                        <div id="voteHolder" style="
+                                            display: inline-block;
+                                            float: right;
+                                            width: 115px;
+                                            height: auto;
+                                            padding: 9px 9px;
+                                            ">
+                                        </div>
+                                    </div>
+                                `)
+
+                                editCenter.insertAfter(reviewStats)
+
+                                //Change value
+                                for(let t=0; t<res.criticReviews.length; t++){
+                                    if(res.criticReviews[t].userid==savedUserId){
+                                        ourData=res.criticReviews[t]
+                                        break
+                                    }
+                                }
+                                if(!ourData){
+                                    for(let t=0; t<res.userReviews.length; t++){
+                                        if(res.userReviews[t].userid==savedUserId){
+                                            ourData=res.userReviews[t]
+                                            break
+                                        }
+                                    }
+                                }
+                                if(ourData){
+                                    editCenter.find('textarea').val(ourData.review)
+                                    if(ourData.vote=="upvote"){
+                                        voteObject=$(`
+                                            <div class="upvote" style="
+                                                display: inline-block;
+                                                float: right;
+                                                ">
+                                                <span class="icon-like selected" id="upvote"></span>
+                                                <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 81.25%;display: block; opacity:0;">
+                                                    <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                    <div class="tooltip-inner">Upvote</div>
+                                                </div>
+                                            </div>
+                                        `)
+                                        voteObject.prependTo(editCenter.find('#voteHolder'))
+                                    }else if(ourData.vote=="mixed"){
+                                        voteObject=$(`
+                                            <div class="upvote" style="
+                                                display: inline-block;
+                                                float: right;
+                                                ">
+                                                <span class="icon-mixed selected" id="mixedvote"></span>
+                                                <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 81.25%;display: block; opacity:0;">
+                                                    <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                    <div class="tooltip-inner">Mixed</div>
+                                                </div>
+                                            </div>
+                                        `)
+                                        voteObject.prependTo(editCenter.find('#voteHolder'))
+                                    }else if(ourData.vote=="downvote"){
+                                        voteObject=$(`
+                                            <div class="downvote" style="
+                                                display: inline-block;
+                                                float: right;
+                                                ">
+                                                <span class="icon-dislike selected" id="downvote"></span>
+                                                <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 81.25%;display: block; opacity:0;">
+                                                    <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                    <div class="tooltip-inner">Downvote</div>
+                                                </div>
+                                            </div>
+                                        `)
+                                        voteObject.prependTo(editCenter.find('#voteHolder'))
+                                    }
+
+                                    voteObject.find('span').hover(function(){
+                                        $(this).parent().find('div').animate({opacity:1},250)
+                                    },function(){
+                                        $(this).parent().find('div').animate({opacity:0},500)
+                                    })
+
+                                    let editDisabled
+                                    editCenter.find('#editButton').click(function(){
+                                        //console.log("vhat")
+                                        if(editDisabled){return}
+                                        currentlyEditing=true
+                                        editDisabled=true
+                                        editCenter.find('#editButton').attr('disabled',true)
+                                        editCenter.find('#editButton').css('display','none')
+                                        editCenter.find('#voteHolder').css('display','none')
+                                        editCenter.find('textarea').removeAttr('disabled')
+                                        editCenter.find('h3').text("Edit Your Review")
+                                        let pushButton=$(`
+                                            <button id="postButton" class="btn-secondary-md group-form-button ng-binding" style="
+                                                float: right;
+                                                " disabled>Post Edit</button>
+                                        `)
+                                        let cancelButton=$(`
+                                            <button id="postButton" class="btn-secondary-md group-form-button ng-binding" style="
+                                                float: right;
+                                                margin-left: 10px;
+                                                "">Cancel Edit</button>
+                                        `)
+                                        let voteContainer=$(`
+                                            <div style="
+                                                display: flex;
+                                                float: right;
+                                                width: 115px;
+                                                height: auto;
+                                                padding: 9px 9px;
+                                                ">
+                                                <div class="upvote" style="
+                                                    display: inline-block;
+                                                    margin: auto;
+                                                    ">
+                                                    <span class="icon-like " id="upvote"></span>
+                                                    <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 65.55%;display: block; opacity:0;">
+                                                        <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                        <div class="tooltip-inner">Upvote</div>
+                                                    </div>
+                                                </div>
+                                                <div class="upvote" style="
+                                                    display: inline-block;
+                                                    margin: auto;
+                                                    ">
+                                                    <span class="icon-mixed" id="mixedvote"></span>
+                                                    <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 69.75%;display: block; opacity:0;">
+                                                        <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                        <div class="tooltip-inner">Mixed</div>
+                                                    </div>
+                                                </div>
+                                                <div class="downvote" style="
+                                                    display: inline-block;
+                                                    margin: auto;
+                                                    ">
+                                                    <span class="icon-dislike " id="downvote"></span>
+                                                    <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 72%;display: block; opacity:0;">
+                                                        <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                        <div class="tooltip-inner">Downvote</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `)
+                                        cancelButton.appendTo(editCenter)
+                                        pushButton.appendTo(editCenter)
+                                        voteContainer.appendTo(editCenter)
+
+                                        let option,netInterval,typed,quit
+                                        if(ourData.vote=="mixed"){
+                                            option=undefined
+                                            voteContainer.find('#mixedvote').addClass('selected')
+                                        }else if(ourData.vote=="upvote"){
+                                            option=true
+                                            voteContainer.find('#upvote').addClass('selected')
+                                        }else{
+                                            option=false
+                                            voteContainer.find('#downvote').addClass('selected')
+                                        }
+                                        voteContainer.find('#upvote').click(function(){
+                                            if(!option){
+                                                option=true
+                                                $(this).addClass("selected")
+                                                voteContainer.find('#downvote').removeClass("selected")
+                                                voteContainer.find('#mixedvote').removeClass("selected")
+                                            }
+                                        })
+                                        voteContainer.find('#mixedvote').click(function(){
+                                            if(option!=undefined){
+                                                option=undefined
+                                                $(this).addClass("selected")
+                                                voteContainer.find('#upvote').removeClass("selected")
+                                                voteContainer.find('#downvote').removeClass("selected")
+                                            }
+                                        })
+                                        voteContainer.find('#downvote').click(function(){
+                                            if(option==undefined || option){
+                                                option=false
+                                                $(this).addClass("selected")
+                                                voteContainer.find('#upvote').removeClass("selected")
+                                                voteContainer.find('#mixedvote').removeClass("selected")
+                                            }
+                                        })
+
+                                        let tweenInTime=250
+                                        let tweenOutTime=500
+                                        voteContainer.find('#downvote').hover(function(){
+                                            $(this).parent().find('div').animate({opacity:1},tweenInTime)
+                                        },function(){
+                                            $(this).parent().find('div').animate({opacity:0},tweenOutTime)
+                                        })
+                                        voteContainer.find('#mixedvote').hover(function(){
+                                            $(this).parent().find('div').animate({opacity:1},tweenInTime)
+                                        },function(){
+                                            $(this).parent().find('div').animate({opacity:0},tweenOutTime)
+                                        })
+                                        voteContainer.find('#upvote').hover(function(){
+                                            $(this).parent().find('div').animate({opacity:1},tweenInTime)
+                                        },function(){
+                                            $(this).parent().find('div').animate({opacity:0},tweenOutTime)
+                                        })
+
+                                        let focused
+                                        let buttonErorr
+                                        editCenter.find('textarea').focus(function(){
+                                            focused=true
+                                        })
+
+                                        let buttonBusy
+                                        pushButton.click(function(){
+                                            let thisVote=option==undefined?"mixed":option?"upvote":"downvote"
+                                            let sameReview=ourData.vote==thisVote
+                                            let sameText=editCenter.find('textarea').val()==ourData.review
+                                            let textEmpty=editCenter.find('textarea').val()==""
+                                            let textNotLongEnough=editCenter.find('textarea').val().length<30
+                                            if((!sameText || !sameReview) && !textNotLongEnough && !textEmpty && !buttonBusy){
+                                                buttonBusy=true
+                                                new Promise((resolve,reject)=>{
+                                                    new Promise((r,r2)=>{
+                                                        let username=$('.age-bracket-label-username').text().replace(": ","")
+                                                        $.get('https://api.roblox.com/users/get-by-username?username='+username,res=>{
+                                                            //console.log(res)
+                                                            r(res)
+                                                        })
+                                                    }).then(res=>{
+                                                        $.post('https://public.spookshd.com:8003/metacritic/post/edit',{
+                                                            id:Number(id),
+                                                            review:editCenter.find('textarea').val(),
+                                                            vote:option==undefined?"mixed":option?"upvote":"downvote",
+                                                            userid:Number(res.Id)
+                                                        },res=>{
+                                                            //console.log(res)
+                                                            resolve(res.result)
+                                                        })
+                                                    })
+                                                }).then(res=>{
+                                                    if(res){
+                                                        //console.log(res)
+                                                        quit(true)
+                                                        update()
+                                                    }
+                                                    buttonBusy=false
+                                                })
+                                            }
+                                        })
+
+                                        netInterval=setInterval(function(){
+                                            let thisVote=option==undefined?"mixed":option?"upvote":"downvote"
+                                            let sameReview=ourData.vote==thisVote
+                                            let sameText=editCenter.find('textarea').val()==ourData.review
+                                            let textEmpty=editCenter.find('textarea').val()==""
+                                            let textNotLongEnough=editCenter.find('textarea').val().length<30
+                                            if(textEmpty || textNotLongEnough || (sameText && sameReview)){
+                                                pushButton.attr("disabled","disabled")
+                                            }else if((!sameText || !sameReview) && !textNotLongEnough && !textEmpty){
+                                                pushButton.removeAttr("disabled")
+                                            }
+
+                                            if(editCenter.find('textarea').val().length<30 && focused){
+                                                editCenter.find('#error').text("30 Characters minimum")
+                                                editCenter.find('#error').css('display','inline-block')
+                                            }else{
+                                                editCenter.find('#error').css('display','none')
+                                            }
+                                        },50)
+
+                                        cancelButton.click(function(){
+                                            quit()
+                                        })
+
+                                        quit=(t)=>{
+                                            pushButton.remove()
+                                            voteContainer.remove()
+                                            cancelButton.remove()
+                                            editCenter.find('#editButton').removeAttr('disabled')
+                                            editCenter.find('#editButton').css('display','inline-block')
+                                            editCenter.find('#voteHolder').css('display','inline-block')
+                                            editCenter.find('textarea').attr('disabled',true)
+                                            if(!t){
+                                                editCenter.find('textarea').val(ourData.review)
+                                            }
+                                            editCenter.find('h3').text("Your Review On This Game")
+                                            editDisabled=false
+                                            currentlyEditing=false
+                                            clearInterval(netInterval)
+                                        }
+                                    })
+                                }
+                            }else{
+                                let nOD
+                                for(let t=0; t<res.criticReviews.length; t++){
+                                    if(res.criticReviews[t].userid==savedUserId){
+                                        nOD=res.criticReviews[t]
+                                        break
+                                    }
+                                }
+                                if(!nOD){
+                                    for(let t=0; t<res.userReviews.length; t++){
+                                        if(res.userReviews[t].userid==savedUserId){
+                                            nOD=res.userReviews[t]
+                                            break
+                                        }
+                                    }
+                                }
+                                if(nOD){
+                                    ourData=nOD
+                                    if(!currentlyEditing){
+                                        editCenter.find('textarea').val(ourData.review)
+                                        if(ourData.vote=="upvote" && (!voteObject || !voteObject.find('#upvote')[0])){
+                                            if(voteObject){voteObject.remove()}
+                                            voteObject=$(`
+                                                <div class="upvote" style="
+                                                    display: inline-block;
+                                                    float: right;
+                                                    ">
+                                                    <span class="icon-like selected" id="upvote"></span>
+                                                    <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 81.25%;display: block; opacity:0;">
+                                                        <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                        <div class="tooltip-inner">Upvote</div>
+                                                    </div>
+                                                </div>
+                                            `)
+                                            voteObject.prependTo(editCenter.find('#voteHolder'))
+                                        }else if(ourData.vote=="mixed"  && (!voteObject || !voteObject.find('#mixedvote')[0])){
+                                            if(voteObject){voteObject.remove()}
+                                            voteObject=$(`
+                                                <div class="upvote" style="
+                                                    display: inline-block;
+                                                    float: right;
+                                                    ">
+                                                    <span class="icon-mixed selected" id="mixedvote"></span>
+                                                    <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 81.25%;display: block; opacity:0;">
+                                                        <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                        <div class="tooltip-inner">Mixed</div>
+                                                    </div>
+                                                </div>
+                                            `)
+                                            voteObject.prependTo(editCenter.find('#voteHolder'))
+                                        }else if(ourData.vote=="downvote" && (!voteObject || !voteObject.find('#downvote')[0])){
+                                            if(voteObject){voteObject.remove()}
+                                            voteObject=$(`
+                                                <div class="downvote" style="
+                                                    display: inline-block;
+                                                    float: right;
+                                                    ">
+                                                    <span class="icon-dislike selected" id="downvote"></span>
+                                                    <div class="tooltip fade bottom in" role="tooltip" id="tooltip131152" style="left: 81.25%;display: block; opacity:0;">
+                                                        <div class="tooltip-arrow" style="left: 50%;"></div>
+                                                        <div class="tooltip-inner">Downvote</div>
+                                                    </div>
+                                                </div>
+                                            `)
+                                            voteObject.prependTo(editCenter.find('#voteHolder'))
+                                        }
+
+                                        voteObject.find('span').hover(function(){
+                                            $(this).parent().find('div').animate({opacity:1},250)
+                                        },function(){
+                                            $(this).parent().find('div').animate({opacity:0},500)
+                                        })
+                                    }
+                                }
+                            }
+                        }
+
+                        if(res!=undefined){
+                            for(let a of res.criticReviews){
+                                if(!reviews[a.userid]){
+                                    reviews[a.userid]=true //We'll change this later
+                                    new Promise((resolve,reject)=>{
+                                        $.get('https://api.roblox.com/users/'+a.userid,res=>{
+                                            resolve(res)
+                                        })
+                                    }).then(rese=>{
+                                        let reviewObject=$(`
+                                            <div class="section-content remove-panel" style="
+                                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+                                                width: 100%;
+                                                padding: 15px;
+                                                margin-bottom: 5px;
+                                                ">
+                                                <div style="
+                                                    display: flex;
+                                                    ">
+                                                    <div id="typeHolder" style="
+                                                        width: 75px;
+                                                        height: 75px;
+                                                        background-image: url(&quot;http://chittagongit.com//images/white-thumbs-up-icon/white-thumbs-up-icon-26.jpg&quot;);
+                                                        background-size: 70%;
+                                                        background-repeat: no-repeat;
+                                                        background-position: center;
+                                                        display: inline-block;
+                                                        "></div>
+                                                    <div style="
+                                                        margin-left: 15px;
+                                                        display: inline-block;
+                                                        ">
+                                                        <div id="reviewUsername" style="
+                                                            font-size: 25px;
+                                                            ">`+rese.Username+`</div>
+                                                        <div id="published">Review published `+a.posted+`</div>
+                                                        <div id="revised" style="display: none;">Revised 02/2/2019</div>
+                                                    </div>
+                                                </div>
+                                                <p style="
+                                                    margin-top: 20px;
+                                                    "><span style="display: inline;" id="start"></span></p>
+                                            </div>
+                                        `)
+
+                                        let maxCap=400
+                                        if(a.review.length>maxCap){
+                                            let nStr=a.review.substr(0,a.review.lastIndexOf(' ', maxCap))
+                                            let rest=a.review.substring(nStr.length+1,a.review.length)
+                                            reviewObject.find('p').find('#start').text(nStr)
+                                            reviewObject.find('p').append($(`
+                                                <span id="dots">
+                                                    ...
+                                                </span>
+                                                <span id="more" style="display: none;">
+                                                    `+rest+`
+                                                </span>
+                                            `))
+                                            reviewObject.append($(`
+                                                <div id="expand">
+                                                    Read more
+                                                </div>
+                                            `))
+                                            let expanded
+                                            reviewObject.find('#expand').click(function(){
+                                                if(expanded){
+                                                    reviewObject.find('p').find('#dots').css('display','inline')
+                                                    reviewObject.find('p').find('#more').css('display','none')
+                                                    $(this).text('Read more')
+                                                }else{
+                                                    reviewObject.find('p').find('#dots').css('display','none')
+                                                    reviewObject.find('p').find('#more').css('display','inline')
+                                                    $(this).text('Read less')
+                                                }
+                                                expanded=!expanded
+                                            })
+                                        }else{
+                                            reviewObject.find('p').text(a.review)
+                                        }
+
+                                        if(a.edited){
+                                            reviewObject.find("#revised").css('display','inline-block')
+                                            reviewObject.find('#revised').text("Revised "+a.edited)
+                                        }
+
+                                        if(a.vote=="upvote"){
+                                            reviewObject.find('#typeHolder').addClass('greatScore')
+                                            reviewObject.find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsup.png)")
+                                        }else if(a.vote=="mixed"){
+                                            reviewObject.find('#typeHolder').addClass('okScore')
+                                            reviewObject.find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/mixedfull.png)")
+                                        }else if(a.vote=="downvote"){
+                                            reviewObject.find('#typeHolder').addClass('badScore')
+                                            reviewObject.find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsdown.png)")
+                                        }
+
+                                        reviewObject.appendTo($('#criticReviewSection'))
+
+                                        reviews[a.userid]=reviewObject
+                                    })
+                                }else if(typeof reviews[a.userid] != "boolean"){
+                                    let maxCap=400
+                                    if(a.review.length>maxCap){
+                                        let nStr=a.review.substr(0,a.review.lastIndexOf(' ', maxCap))
+                                        let rest=a.review.substring(nStr.length+1,a.review.length)
+                                        reviews[a.userid].find('p').find('#start').text(nStr)
+                                        if(reviews[a.userid].find('p').find('#dots')[0]){
+                                            reviews[a.userid].find('p').find('#more').text(rest)
+                                        }else{
+                                            reviews[a.userid].find('p').append($(`
+                                                <span id="dots">
+                                                    ...
+                                                </span>
+                                                <span id="more" style="display: none;">
+                                                    `+rest+`
+                                                </span>
+                                            `))
+                                            reviews[a.userid].append($(`
+                                                <div id="expand">
+                                                    Read more
+                                                </div>
+                                            `))
+                                            let expanded
+                                            reviews[a.userid].find('#expand').click(function(){
+                                                if(expanded){
+                                                    reviews[a.userid].find('p').find('#dots').css('display','inline')
+                                                    reviews[a.userid].find('p').find('#more').css('display','none')
+                                                    $(this).text('Read more')
+                                                }else{
+                                                    reviews[a.userid].find('p').find('#dots').css('display','none')
+                                                    reviews[a.userid].find('p').find('#more').css('display','inline')
+                                                    $(this).text('Read less')
+                                                }
+                                                expanded=!expanded
+                                            })
+                                        }
+                                    }else{
+                                        if(reviews[a.userid].find('p').find('#dots')[0]){
+                                            reviews[a.userid].find('p').find('#dots').remove()
+                                            reviews[a.userid].find('p').find('#more').remove()
+                                            reviews[a.userid].find('#expand').remove()
+                                        }
+                                        reviews[a.userid].find('p').find('#start').text(a.review)
+                                    }
+
+                                    for(let b of ['badScore','okScore','greatScore']){
+                                        reviews[a.userid].find('#typeHolder').removeClass(b)
+                                    }
+
+                                    if(a.edited){
+                                        reviews[a.userid].find("#revised").css('display','inline-block')
+                                        reviews[a.userid].find('#revised').text("Revised "+a.edited)
+                                    }
+
+                                    if(a.vote=="upvote"){
+                                        reviews[a.userid].find('#typeHolder').addClass('greatScore')
+                                        reviews[a.userid].find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsup.png)")
+                                    }else if(a.vote=="mixed"){
+                                        reviews[a.userid].find('#typeHolder').addClass('okScore')
+                                        reviews[a.userid].find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/mixedfull.png)")
+                                    }else if(a.vote=="downvote"){
+                                        reviews[a.userid].find('#typeHolder').addClass('badScore')
+                                        reviews[a.userid].find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsdown.png)")
+                                    }
+                                }
+                            }
+
+                            for(let a of res.userReviews){
+                                if(!reviews[a.userid]){
+                                    reviews[a.userid]=true //We'll change this later
+                                    new Promise((resolve,reject)=>{
+                                        $.get('https://api.roblox.com/users/'+a.userid,res=>{
+                                            resolve(res)
+                                        })
+                                    }).then(rese=>{
+                                        let reviewObject=$(`
+                                            <div class="section-content remove-panel" style="
+                                                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+                                                width: 100%;
+                                                padding: 15px;
+                                                margin-bottom: 5px;
+                                                ">
+                                                <div style="
+                                                    display: flex;
+                                                    ">
+                                                    <div id="typeHolder" style="
+                                                        width: 75px;
+                                                        height: 75px;
+                                                        background-image: url(&quot;http://chittagongit.com//images/white-thumbs-up-icon/white-thumbs-up-icon-26.jpg&quot;);
+                                                        background-size: 70%;
+                                                        background-repeat: no-repeat;
+                                                        background-position: center;
+                                                        display: inline-block;
+                                                        "></div>
+                                                    <div style="
+                                                        margin-left: 15px;
+                                                        display: inline-block;
+                                                        ">
+                                                        <div id="reviewUsername" style="
+                                                            font-size: 25px;
+                                                            ">`+rese.Username+`</div>
+                                                        <div id="published">Review published `+a.posted+`</div>
+                                                        <div id="revised" style="display: none;">Revised 02/2/2019</div>
+                                                    </div>
+                                                </div>
+                                                <p style="
+                                                    margin-top: 20px;
+                                                    ">`+a.review+`</p>
+                                            </div>
+                                        `)
+
+                                        if(a.edited){
+                                            reviewObject.find("#revised").css('display','inline-block')
+                                            reviewObject.find('#revised').text("Revised "+a.edited)
+                                        }
+
+                                        if(a.vote=="upvote"){
+                                            reviewObject.find('#typeHolder').addClass('greatScore')
+                                            reviewObject.find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsup.png)")
+                                        }else if(a.vote=="mixed"){
+                                            reviewObject.find('#typeHolder').addClass('okScore')
+                                            reviewObject.find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/mixedfull.png)")
+                                        }else if(a.vote=="downvote"){
+                                            reviewObject.find('#typeHolder').addClass('badScore')
+                                            reviewObject.find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsdown.png)")
+                                        }
+
+                                        reviewObject.appendTo($('#userReviewSection'))
+
+                                        reviews[a.userid]=reviewObject
+                                    })
+                                }else if(typeof reviews[a.userid] != "boolean"){
+                                    reviews[a.userid].find('p').text(a.review)
+
+                                    for(let b of ['badScore','okScore','greatScore']){
+                                        reviews[a.userid].find('#typeHolder').removeClass(b)
+                                    }
+
+                                    if(a.edited){
+                                        reviews[a.userid].find("#revised").css('display','inline-block')
+                                        reviews[a.userid].find('#revised').text("Revised "+a.edited)
+                                    }
+
+                                    if(a.vote=="upvote"){
+                                        reviews[a.userid].find('#typeHolder').addClass('greatScore')
+                                        reviews[a.userid].find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsup.png)")
+                                    }else if(a.vote=="mixed"){
+                                        reviews[a.userid].find('#typeHolder').addClass('okScore')
+                                        reviews[a.userid].find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/mixedfull.png)")
+                                    }else if(a.vote=="downvote"){
+                                        reviews[a.userid].find('#typeHolder').addClass('badScore')
+                                        reviews[a.userid].find('#typeHolder').css('background-image',"url(chrome-extension://hjlbdpgppecbhpfgaipakkalhegfofoo/thumbsdown.png)")
+                                    }
+                                }
+                            }
+                        }
+                    })
+                }
+
+                setInterval(update,30000)
+                update()
+            }
+        })
     })
 }
 
@@ -948,15 +2201,16 @@ function settings_page(){
 
 if(document.location.href.match('my/groupadmin')){
     group_admin()
-}else if(document.location.href.match('games/')){
+}else if(document.location.href.match(/games\/\d+/)){
+    criticGamePage()
+    metaScoreForSmallGameThumbs()
     game_filter()
-    chrome.storage.sync.get('revStatsEnabled', function(data) {
-    })
     revenue_stats()
 }else if(document.location.href.match('game-pass/')){
     revenue_stats_page()
 }else if(document.location.href.match('my/account')){
     settings_page()
 }else{
+    metaScoreForSmallGameThumbs()
     game_filter()
 }
