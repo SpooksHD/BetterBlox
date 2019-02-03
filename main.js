@@ -371,33 +371,49 @@ function metaScoreForSmallGameThumbs(){
         }).then(res=>{
             if(true){
                 let filtered={}
+                let idFilter=[
+                    {
+                        f: /\/refer\?SortFilter=1/,
+                        p: 4,
+                    },
+                    {
+                        f: /\/refer\?Rec/,
+                        p: 2,
+                    },
+                    {
+                        f: /\/refer\?SortFilter=5/,
+                        p: 1,
+                    },
+                    {
+                        f: /\/refer\?SortFilter=6/,
+                        p: 4,
+                    },
+                    {
+                        f: /\/refer\?SortFilter=8/,
+                        p: 4,
+                    },
+                    {
+                        f: /\/refer\?SortFilter=20/,
+                        p: 4,
+                    },
+                    {
+                        f: /\/refer\?SortFilter=23/,
+                        p: 4,
+                    },
+                    {
+                        f: /\/refer\?SortFilter=3/,
+                        p: 4,
+                    },
+                    {
+                        f: /\d+/,
+                        p: 0,
+                    },
+                ]
+
                 setInterval(function(){
                     $('.game-card-link').each(function(index,value){
                         if($(this).find('.game-name-title') && !$(this).attr('uuid')){
                             let parent=$(this)
-
-                            let idFilter=[
-                                {
-                                    f: /\/refer\?SortFilter=1/,
-                                    p: 4,
-                                },
-                                {
-                                    f: /\/refer\?Rec/,
-                                    p: 2,
-                                },
-                                {
-                                    f: /\/refer\?SortFilter=5/,
-                                    p: 1,
-                                },
-                                {
-                                    f: /\/refer\?SortFilter=6/,
-                                    p: 4,
-                                },
-                                {
-                                    f: /\d+/,
-                                    p: 0,
-                                },
-                            ]
 
                             let id
 
@@ -467,29 +483,6 @@ function metaScoreForSmallGameThumbs(){
                     $('.item-card-link').each(function(index,value){
                         if($(this).find('.item-card-name') && !$(this).attr('uuid')){
                             let parent=$(this)
-
-                            let idFilter=[
-                                {
-                                    f: /\/refer\?SortFilter=1/,
-                                    p: 4,
-                                },
-                                {
-                                    f: /\/refer\?Rec/,
-                                    p: 2,
-                                },
-                                {
-                                    f: /\/refer\?SortFilter=5/,
-                                    p: 1,
-                                },
-                                {
-                                    f: /\/refer\?SortFilter=6/,
-                                    p: 4,
-                                },
-                                {
-                                    f: /\d+/,
-                                    p: 0,
-                                },
-                            ]
 
                             let id
 
